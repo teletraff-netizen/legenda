@@ -1,0 +1,742 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>Легенда</title>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#12153a; --bg2:#0d1030; --card:#1f2456; --card2:#272d66; --line:#30377a;
+  --text:#fff; --muted:#a6abd8; --dim:#6f75ad;
+  --orange:#ec6a3f; --green:#2fb35f; --blue:#8fd3ff; --yellow:#ffd23f; --lav:#c8c9ef; --red:#ef5b5b; --mint:#7be0a4;
+  --top:max(env(safe-area-inset-top),var(--tg-content-safe-area-inset-top,0px));
+  --bottom:max(env(safe-area-inset-bottom),var(--tg-safe-area-inset-bottom,0px));
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;background:var(--bg);color:var(--text);font-family:Manrope,-apple-system,system-ui,sans-serif;font-weight:600}
+body{min-height:100vh;overscroll-behavior:none}
+button{font:inherit;color:inherit;border:0;background:none;cursor:pointer;padding:0}
+#app{max-width:480px;margin:0 auto;min-height:100vh;display:flex;flex-direction:column}
+.screen{flex:1;display:flex;flex-direction:column;padding:calc(var(--top) + 16px) 18px calc(var(--bottom) + 18px);animation:in .25s ease}
+.screen.tabbed{padding-bottom:calc(var(--bottom) + 92px)}
+@keyframes in{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+h1{font-size:28px;font-weight:800;margin:0;line-height:1.15}
+h2{font-size:20px;font-weight:800;margin:0}
+.muted{color:var(--muted)} .dim{color:var(--dim)}
+.card{background:var(--card);border-radius:18px;padding:16px}
+.btn{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;height:58px;border-radius:18px;background:var(--orange);color:#14173d;font-weight:800;font-size:18px;transition:transform .1s}
+.btn:active{transform:scale(.98)}
+.btn.dark{background:var(--card);color:#fff}
+.btn.navy{background:#14173d;color:#fff}
+.btn[disabled]{opacity:.4}
+.spacer{flex:1;min-height:16px}
+.row{display:flex;align-items:center;gap:12px}
+.between{justify-content:space-between}
+.gap{display:flex;flex-direction:column;gap:12px}
+.chip{display:inline-flex;align-items:center;gap:6px;padding:7px 12px;border-radius:999px;background:var(--card);font-size:14px}
+
+/* вход */
+.login .logo{width:62%;margin:28px auto 26px;display:block}
+.login .rings{position:fixed;inset:0;pointer-events:none;z-index:-1;overflow:hidden}
+.login .rings i{position:absolute;border-radius:50%;border:2px solid #24306a}
+label{display:block;color:var(--muted);font-size:15px;margin:16px 0 8px}
+input{width:100%;height:58px;border-radius:16px;border:2px solid #2a3175;background:#1f2456;color:#fff;font:inherit;font-size:19px;font-weight:700;padding:0 18px;outline:none}
+input:focus{border-color:var(--orange)}
+.ok-line{color:var(--blue);font-size:14px;margin-top:8px;min-height:20px}
+.err-line{color:var(--red)}
+
+/* главная */
+.top{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px}
+.top img{height:34px}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:16px 0}
+.stat{background:var(--card);border-radius:14px;padding:12px}
+.stat small{display:block;color:var(--muted);font-size:13px}
+.stat b{font-size:23px;font-weight:800}
+.stat b span{font-size:14px;color:var(--muted)}
+.daily{background:var(--orange);border-radius:22px;padding:18px;color:#14173d;position:relative;overflow:hidden}
+.daily:after{content:"";position:absolute;right:-60px;top:-30px;width:190px;height:190px;border-radius:50%;border:26px solid rgba(255,255,255,.12)}
+.daily .over{font-size:12px;letter-spacing:.08em;font-weight:800;opacity:.75}
+.daily h2{font-size:27px;margin:6px 0 4px;color:#14173d;position:relative;z-index:1}
+.daily .tags{display:flex;gap:6px;margin:10px 0 14px;flex-wrap:wrap}
+.daily .tags span{background:rgba(20,23,61,.14);border-radius:999px;padding:5px 10px;font-size:13px;font-weight:800}
+.daily .btn{position:relative;z-index:1}
+.bar{height:7px;border-radius:9px;background:#30377a;overflow:hidden}
+.bar i{display:block;height:100%;border-radius:9px;background:var(--yellow)}
+.task{display:flex;align-items:center;gap:12px;background:var(--card);border-radius:16px;padding:14px;width:100%;text-align:left}
+.task .dot{width:38px;height:38px;border-radius:12px;background:var(--card2);display:grid;place-items:center;flex:none}
+.task .dot i{width:14px;height:14px;border-radius:50%}
+.task b{display:block;font-size:16px}
+.task small{color:var(--muted);font-size:13px}
+.task .pts{margin-left:auto;font-weight:800;color:var(--blue)}
+
+/* таббар */
+.tabbar{position:fixed;left:0;right:0;bottom:0;background:var(--bg2);border-top:1px solid #1d2152;display:flex;justify-content:space-around;padding:10px 0 calc(var(--bottom) + 10px);z-index:5}
+.tabbar button{display:flex;flex-direction:column;align-items:center;gap:4px;font-size:13px;color:var(--muted);width:90px}
+.tabbar button.on{color:var(--orange)}
+.tabbar svg{width:26px;height:26px}
+
+/* задание */
+.progress{display:flex;align-items:center;gap:10px;margin-bottom:16px}
+.close{width:44px;height:44px;border-radius:12px;background:var(--card);display:grid;place-items:center;flex:none}
+.segs{flex:1;display:flex;gap:5px}
+.segs i{flex:1;height:6px;border-radius:6px;background:#2c3372}
+.segs i.done{background:var(--orange)} .segs i.now{background:#fff}
+.count{font-weight:800;color:var(--muted);min-width:30px;text-align:right}
+.rink{position:relative;border-radius:20px;overflow:hidden;background:#eef3f8}
+.rink canvas{display:block;width:100%;height:auto}
+.rink .badge{position:absolute;bottom:12px;left:12px;background:#14173d;color:#fff;font-size:13px;font-weight:800;padding:6px 11px;border-radius:999px}
+.rink .stop{position:absolute;bottom:12px;right:12px;background:var(--orange);color:#14173d;font-size:13px;font-weight:800;padding:6px 11px;border-radius:999px}
+.rink .cd{position:absolute;inset:0;display:grid;place-items:center;font-size:72px;font-weight:800;color:#14173d;background:rgba(238,243,248,.6)}
+.q{font-size:23px;font-weight:800;margin:18px 0 4px;line-height:1.2}
+.timer{height:5px;border-radius:5px;background:#2c3372;margin:14px 0;overflow:hidden}
+.timer i{display:block;height:100%;background:var(--blue);width:100%}
+.opts{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.opts.list{grid-template-columns:1fr}
+.opt{min-height:74px;border-radius:18px;background:var(--card);border:2px solid #2a3175;font-size:30px;font-weight:800;padding:8px 14px;transition:transform .1s}
+.opts.list .opt{min-height:60px;font-size:17px;text-align:left}
+.opt:active{transform:scale(.97)}
+.opt[disabled]{opacity:.45}
+.opt.ok{background:var(--green);border-color:var(--green);opacity:1}
+.opt.bad{border:2px dashed var(--muted);opacity:1}
+.opt.pick{border-color:var(--orange)}
+.note{text-align:center;color:var(--muted);font-size:14px;margin-top:14px}
+.explain{display:flex;gap:10px;background:var(--card);border-radius:16px;padding:14px;margin-top:14px;font-size:15px;line-height:1.4}
+.explain svg{flex:none;color:var(--yellow)}
+
+/* совмести */
+.match{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:16px}
+.match .col{display:flex;flex-direction:column;gap:10px}
+.match .col small{color:var(--muted);font-size:13px;text-align:center}
+.mbtn{min-height:62px;border-radius:16px;background:var(--card);border:2px solid #2a3175;font-size:17px;font-weight:800;padding:6px 8px;transition:transform .1s,background .2s}
+.mbtn.sel{border-color:var(--orange);background:var(--card2)}
+.mbtn.done{background:var(--green);border-color:var(--green)}
+.mbtn.shake{animation:shake .35s;border-color:var(--red)}
+@keyframes shake{25%{transform:translateX(-6px)}75%{transform:translateX(6px)}}
+
+/* результат раунда */
+.result{text-align:center;padding-top:20px}
+.halo{width:190px;height:190px;border-radius:50%;margin:10px auto 22px;display:grid;place-items:center;background:radial-gradient(circle,#1d2a4f 55%,transparent 56%),#191d4a}
+.halo div{width:150px;height:150px;border-radius:50%;display:grid;place-items:center}
+.halo.ok div{background:var(--green)}
+.halo.no div{background:#283070}
+.result h1{font-size:38px}
+.result p{color:#d6d9f5;font-size:17px;line-height:1.45;margin:10px 0 18px}
+.lines{display:flex;flex-direction:column;gap:8px;text-align:left}
+.line{display:flex;justify-content:space-between;background:var(--card);border-radius:14px;padding:15px 18px;font-size:16px}
+.line b{color:#fff} .line .p{color:#fff;font-weight:800} .line .y{color:var(--yellow);font-weight:800} .line .b{color:var(--blue);font-weight:800}
+.recap{background:var(--card);border-radius:16px;padding:14px;text-align:left}
+.recap small{color:var(--muted);letter-spacing:.08em;font-size:12px}
+.recap .g{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:10px}
+.recap .g div{background:var(--card2);border-radius:12px;padding:10px;text-align:center;font-size:13px;color:var(--muted)}
+.recap .g b{display:block;font-size:24px;color:#fff}
+.confetti{position:absolute;width:10px;height:6px;border-radius:2px;animation:fall 1.4s ease-out forwards}
+@keyframes fall{from{transform:translateY(-20px) rotate(0)}to{transform:translateY(60px) rotate(260deg);opacity:0}}
+
+/* итог */
+.ring{position:relative;width:190px;height:190px;margin:18px auto}
+.ring svg{transform:rotate(-90deg)}
+.ring div{position:absolute;inset:0;display:grid;place-content:center;text-align:center}
+.ring b{font-size:46px;font-weight:800;line-height:1}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.two .card small{color:var(--muted);font-size:14px}
+.two .card b{display:block;font-size:34px;font-weight:800;margin-top:6px}
+.newbadge{display:flex;gap:14px;align-items:center;border:2px solid var(--yellow);border-radius:18px;padding:14px;background:var(--card)}
+.newbadge small{color:var(--yellow);letter-spacing:.08em;font-weight:800;font-size:12px}
+.icon{width:56px;height:56px;border-radius:16px;display:grid;place-items:center;flex:none;color:#14173d}
+.top3 .r{display:flex;padding:12px 14px;border-radius:12px;font-size:17px}
+.top3 .r.me{background:var(--card2)} .top3 .r.me span:last-child{color:var(--orange)}
+.top3 .r span:first-child{width:30px;color:var(--yellow);font-weight:800}
+.top3 .r span:last-child{margin-left:auto;font-weight:800}
+
+/* рейтинг */
+.seg{display:flex;background:var(--card);border-radius:16px;padding:5px;margin:18px 0 10px}
+.seg button{flex:1;height:44px;border-radius:12px;color:var(--muted);font-weight:800;font-size:16px}
+.seg button.on{background:var(--orange);color:#14173d}
+.podium{display:flex;align-items:flex-end;justify-content:center;gap:8px;margin-top:20px}
+.podium .p{flex:1;text-align:center}
+.av{width:64px;height:64px;border-radius:50%;display:grid;place-items:center;margin:0 auto 6px;font-weight:800;font-size:22px;background:var(--lav);color:#14173d;border:4px solid #3b4282}
+.podium .p.first .av{width:84px;height:84px;background:var(--orange);border-color:var(--yellow);font-size:28px}
+.podium .p.me .av{background:var(--blue)}
+.podium .stand{background:var(--card);border-radius:14px 14px 0 0;padding:10px 0;margin-top:8px}
+.podium .stand b{display:block;font-size:24px}
+.podium .stand small{color:var(--muted)}
+.podium .p.first .stand{background:var(--orange);color:#14173d}
+.podium .p.first .stand small{color:#14173d}
+.list .it{display:flex;align-items:center;gap:12px;padding:12px 4px;border-bottom:1px solid #262c66}
+.list .it .n{width:22px;color:var(--muted)}
+.list .it .av{width:44px;height:44px;font-size:15px;margin:0;background:var(--card2);color:#fff;border:0}
+.list .it small{display:block;color:var(--muted);font-size:13px}
+.list .it .s{margin-left:auto;font-weight:800;font-size:17px}
+.mine{position:sticky;bottom:calc(var(--bottom) + 84px);display:flex;align-items:center;gap:12px;background:var(--orange);color:#14173d;border-radius:16px;padding:12px 14px;margin-top:12px}
+.mine .av{width:44px;height:44px;font-size:15px;margin:0;background:#14173d;color:#fff;border:0}
+.mine small{display:block;font-size:13px}
+.mine .s{margin-left:auto;font-weight:800;font-size:17px}
+
+/* профиль */
+.skill{margin:14px 0}
+.skill .row{justify-content:space-between;margin-bottom:8px;font-size:16px}
+.skill .bar{height:12px}
+.badges{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:12px;text-align:center}
+.badges .icon{margin:0 auto 6px}
+.badges .lock{background:transparent;border:2px dashed #4a5196;color:var(--dim)}
+.badges small{font-size:12px;line-height:1.2;display:block}
+.modal{position:fixed;inset:0;background:rgba(8,10,32,.7);display:flex;align-items:flex-end;justify-content:center;z-index:10;padding:16px}
+.modal .sheet{background:var(--card);border-radius:22px;padding:22px 18px calc(var(--bottom) + 18px);width:100%;max-width:440px}
+.modal p{margin:8px 0 18px}
+.toast{position:fixed;left:50%;top:calc(var(--top) + 14px);transform:translateX(-50%);background:#fff;color:#14173d;padding:10px 16px;border-radius:12px;font-weight:800;z-index:9}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<script>
+'use strict';
+const tg = window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.initData !== undefined ? window.Telegram.WebApp : null;
+const inTg = !!(tg && tg.platform && tg.platform !== 'unknown');
+if (inTg) {
+  tg.ready(); tg.expand();
+  try { tg.setHeaderColor('#12153a'); tg.setBackgroundColor('#12153a'); tg.setBottomBarColor && tg.setBottomBarColor('#0d1030'); } catch (e) {}
+  try { tg.disableVerticalSwipes && tg.disableVerticalSwipes(); } catch (e) {}
+}
+const haptic = (kind) => {
+  if (!inTg || !tg.HapticFeedback) return;
+  try {
+    if (kind === 'ok' || kind === 'error') tg.HapticFeedback.notificationOccurred(kind === 'ok' ? 'success' : 'error');
+    else tg.HapticFeedback.impactOccurred('light');
+  } catch (e) {}
+};
+
+/* ---------- данные команды (демо, пока нет сервера) ---------- */
+const TEAM = { code: 'ЛЕГЕНДА-2016', title: 'Команда «Легенда», 2016 г. р.', size: 28 };
+const DEMO = [
+  ['Артём С.', 1610, 3610, 8], ['Даня П.', 1350, 3150, 5], ['Егор В.', 1180, 2980, 4], ['Тимур М.', 1120, 2910, 7],
+  ['Илья Л.', 960, 2760, 2], ['Макар Б.', 840, 2640, 5], ['Лёва Г.', 600, 2400, 0], ['Саша Р.', 520, 2210, 3],
+  ['Вова Ш.', 310, 1980, 0], ['Никита З.', 280, 1720, 1], ['Рома Д.', 240, 1510, 2], ['Федя К.', 120, 1240, 0]
+];
+const SKILLS = {
+  'Слежение': '#ec6a3f', 'Счёт': '#8fd3ff', 'Память': '#ffd23f', 'Реакция': '#c8c9ef', 'Знания': '#7be0a4', 'Теория': '#ffb38a'
+};
+const BADGES = [
+  { id: 'first', name: 'Первая игра', color: '#8fd3ff', icon: 'star', why: 'Пройди первое задание' },
+  { id: 'sniper', name: 'Снайпер', color: '#ffd23f', icon: 'target', why: '3 верных ответа подряд' },
+  { id: 'perfect', name: 'Без ошибок', color: '#2fb35f', icon: 'check', why: 'Задание без единой ошибки' },
+  { id: 'eye', name: 'Зоркий глаз', color: '#8fd3ff', icon: 'eye', why: '5 из 5 в «Шайбах в воротах»' },
+  { id: 'fast', name: 'Молния', color: '#c8c9ef', icon: 'bolt', why: 'Верный ответ быстрее 3 секунд' },
+  { id: 'scholar', name: 'Знаток', color: '#7be0a4', icon: 'book', why: 'Пройди 3 разных задания' },
+  { id: 'week', name: 'Неделя без пропусков', color: '#ec6a3f', icon: 'flame', why: 'Серия 7 дней' },
+  { id: 'captain', name: 'Капитан', color: '#ffd23f', icon: 'crown', why: '1 место за неделю' }
+];
+
+/* ---------- хранение: облако Telegram + память браузера ---------- */
+const KEY = 'legenda_v1';
+let S = null;
+const blank = () => ({ name: '', team: '', points: 0, streak: 0, lastDay: null, plays: [], badges: [], answers: 0, correct: 0 });
+function loadState() {
+  return new Promise((resolve) => {
+    let local = null;
+    try { local = JSON.parse(localStorage.getItem(KEY)); } catch (e) {}
+    if (inTg && tg.CloudStorage && tg.isVersionAtLeast && tg.isVersionAtLeast('6.9')) {
+      tg.CloudStorage.getItem(KEY, (err, val) => {
+        let cloud = null;
+        try { cloud = val ? JSON.parse(val) : null; } catch (e) {}
+        resolve(cloud || local || blank());
+      });
+    } else resolve(local || blank());
+  });
+}
+function save() {
+  // Храним только последние 60 игр, чтобы влезть в лимит облака Telegram (4 КБ).
+  S.plays = S.plays.slice(-60);
+  const json = JSON.stringify(S);
+  try { localStorage.setItem(KEY, json); } catch (e) {}
+  if (inTg && tg.CloudStorage && tg.isVersionAtLeast && tg.isVersionAtLeast('6.9')) {
+    try { tg.CloudStorage.setItem(KEY, json); } catch (e) {}
+  }
+}
+
+/* ---------- даты ---------- */
+const dayKey = (d = new Date()) => d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+const yesterdayKey = () => { const d = new Date(); d.setDate(d.getDate() - 1); return dayKey(d); };
+const mondayKey = () => { const d = new Date(); const w = (d.getDay() + 6) % 7; d.setDate(d.getDate() - w); return dayKey(d); };
+const daysToMonday = () => 7 - ((new Date().getDay() + 6) % 7);
+const dayNum = () => Math.floor((Date.now() - new Date().getTimezoneOffset() * 60000) / 864e5);
+
+/* ---------- задания ---------- */
+let TASKS = [];
+async function loadTasks() {
+  if (window.EMBEDDED_TASKS) { TASKS = window.EMBEDDED_TASKS; return; }
+  const idx = await fetch('tasks/index.json', { cache: 'no-store' }).then(r => r.json());
+  TASKS = await Promise.all(idx.tasks.map(f => fetch('tasks/' + f, { cache: 'no-store' }).then(r => r.json())));
+}
+const taskById = (id) => TASKS.find(t => t.id === id);
+const dailyTask = () => TASKS[dayNum() % TASKS.length];
+const playedToday = (id) => S.plays.some(p => p.id === id && p.date === dayKey() && p.pts > 0);
+const everPlayed = (id) => S.plays.some(p => p.id === id);
+const taskSize = (t) => t.type === 'goals' ? t.rounds.length : t.type === 'quiz' ? t.questions.length : t.pairs.length;
+const typeName = { goals: 'Игра на внимание', quiz: 'Викторина', match: 'Совмести пары' };
+
+/* ---------- рейтинг ---------- */
+const weekPoints = () => { const m = mondayKey(); return S.plays.filter(p => p.date >= m).reduce((a, p) => a + p.pts, 0); };
+function board(mode) {
+  const me = { name: shortName(S.name) + ' · ты', me: true, week: weekPoints(), all: S.points, streak: S.streak };
+  const rows = DEMO.map(([name, week, all, streak]) => ({ name, week, all, streak })).concat(me);
+  const k = mode === 'all' ? 'all' : 'week';
+  rows.sort((a, b) => b[k] - a[k] || (a.me ? -1 : 1));
+  rows.forEach((r, i) => { r.rank = i + 1; r.score = r[k]; });
+  return rows;
+}
+const myRank = (mode = 'week') => board(mode).find(r => r.me).rank;
+const shortName = (n) => (n || '').trim().split(/\s+/).map((w, i) => i === 0 ? w : w[0] + '.').join(' ');
+const initials = (n) => (n || '?').replace(' · ты', '').trim().split(/\s+/).map(w => w[0]).join('').slice(0, 2).toUpperCase();
+const fmt = (n) => String(n).replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
+const esc = (s) => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const plural = (n, a, b, c) => { const m10 = n % 10, m100 = n % 100; return m10 === 1 && m100 !== 11 ? a : m10 >= 2 && m10 <= 4 && (m100 < 12 || m100 > 14) ? b : c; };
+const shuffle = (a) => { a = a.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
+
+/* ---------- иконки ---------- */
+const I = {
+  home: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M4 10.5 12 4l8 6.5V20h-5v-5H9v5H4z"/></svg>',
+  chart: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 20V11M10 20V6M14 20V9M18 20V13M4 20h16"/></svg>',
+  user: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 21c1-4 4.5-6 8-6s7 2 8 6"/></svg>',
+  x: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg>',
+  arrow: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>',
+  chev: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="m9 6 6 6-6 6"/></svg>',
+  bulb: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-3.5 10.9c.6.5 1 1.2 1 2.1h5c0-.9.4-1.6 1-2.1A6 6 0 0 0 12 3z"/></svg>',
+  flame: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round"><path d="M12 3c1 3.5 5 5.5 5 10a5 5 0 0 1-10 0c0-2 1-3.5 2-4.5.3 1.5 1 2.5 2 3 0-3 0-5.5 1-8.5z"/></svg>',
+  target: '<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1.5" fill="currentColor"/></svg>',
+  check: '<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12.5 4.5 4.5L19 7.5"/></svg>',
+  eye: '<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>',
+  bolt: '<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linejoin="round"><path d="M13 2 4 14h7l-1 8 9-12h-7z"/></svg>',
+  book: '<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linejoin="round"><path d="M4 5a2 2 0 0 1 2-2h13v16H6a2 2 0 0 0-2 2zM4 21V5M8 7h7"/></svg>',
+  star: '<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linejoin="round"><path d="m12 3 2.8 5.8 6.2.9-4.5 4.4 1 6.2L12 17.4l-5.5 2.9 1-6.2L3 9.7l6.2-.9z"/></svg>',
+  crown: '<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linejoin="round"><path d="m3 7 4.5 4L12 4l4.5 7L21 7l-2 12H5z"/></svg>',
+  lock: '<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>'
+};
+
+/* ---------- навигация ---------- */
+const app = document.getElementById('app');
+let cleanup = null, backHandler = null;
+function go(name, arg) {
+  if (cleanup) { cleanup(); cleanup = null; }
+  backHandler = null;
+  window.scrollTo(0, 0);
+  SCREENS[name](arg);
+  if (inTg && tg.BackButton) backHandler ? tg.BackButton.show() : tg.BackButton.hide();
+}
+if (inTg && tg.BackButton) tg.BackButton.onClick(() => backHandler && backHandler());
+function render(html, cls = '') { app.innerHTML = '<div class="screen ' + cls + '">' + html + '</div>'; return app.firstChild; }
+const tabbar = (on) => '<nav class="tabbar">' +
+  [['home', 'Главная', I.home], ['rating', 'Рейтинг', I.chart], ['profile', 'Профиль', I.user]]
+    .map(([k, t, ic]) => '<button data-tab="' + k + '" class="' + (k === on ? 'on' : '') + '">' + ic + t + '</button>').join('') + '</nav>';
+app.addEventListener('click', (e) => {
+  const t = e.target.closest('[data-tab]');
+  if (t) { haptic(); go(t.dataset.tab); }
+});
+function toast(msg) {
+  const el = document.createElement('div'); el.className = 'toast'; el.textContent = msg; document.body.appendChild(el);
+  setTimeout(() => el.remove(), 1800);
+}
+function confirmExit(cb) {
+  const text = 'Выйти из задания? Результат не сохранится.';
+  if (inTg && tg.showConfirm) { tg.showConfirm(text, ok => ok && cb()); return; }
+  const m = document.createElement('div'); m.className = 'modal';
+  m.innerHTML = '<div class="sheet"><h2>Выйти из задания?</h2><p class="muted">Результат не сохранится.</p><div class="gap"><button class="btn" data-a="stay">Остаться</button><button class="btn dark" data-a="out">Выйти</button></div></div>';
+  m.onclick = (e) => { const a = e.target.dataset.a; if (!a && e.target !== m) return; m.remove(); if (a === 'out') cb(); };
+  document.body.appendChild(m);
+}
+
+/* ---------- экраны ---------- */
+const SCREENS = {};
+
+SCREENS.login = () => {
+  const tgName = inTg && tg.initDataUnsafe && tg.initDataUnsafe.user ? tg.initDataUnsafe.user.first_name : '';
+  const el = render(
+    '<div class="rings"><i style="width:620px;height:620px;left:-300px;top:200px"></i><i style="width:360px;height:360px;left:-180px;top:300px;border-color:#3b2a4a"></i></div>' +
+    '<img class="logo" src="logo.png" alt="Легенда">' +
+    '<h1 style="text-align:center;font-size:32px">Тренировка внимания</h1>' +
+    '<p class="muted" style="text-align:center;font-size:17px;line-height:1.45;margin:12px 8px 0">Каждый день новое задание. Набирай очки и поднимайся в рейтинге команды.</p>' +
+    '<div class="spacer"></div>' +
+    '<label for="nm">Как тебя зовут?</label><input id="nm" autocomplete="off" maxlength="24" placeholder="Имя" value="' + esc(S.name || tgName) + '">' +
+    '<label for="cd">Код команды от тренера</label><input id="cd" autocomplete="off" maxlength="20" placeholder="Например, ЛЕГЕНДА-2016" style="text-transform:uppercase;letter-spacing:.04em">' +
+    '<div class="ok-line" id="hint"></div>' +
+    '<button class="btn" id="go" style="margin-top:14px" disabled>Вступить в команду</button>' +
+    '<p class="dim" style="text-align:center;font-size:14px;margin:14px 0 0">Мы сохраняем только имя и результаты игр.</p>', 'login');
+  const nm = el.querySelector('#nm'), cd = el.querySelector('#cd'), hint = el.querySelector('#hint'), btn = el.querySelector('#go');
+  const norm = (s) => s.toUpperCase().replace(/[\s_–—-]+/g, '').replace('Ё', 'Е');
+  const check = () => {
+    const ok = norm(cd.value) === norm(TEAM.code);
+    cd.style.borderColor = ok ? 'var(--orange)' : '';
+    hint.className = 'ok-line' + (cd.value.length >= 6 && !ok ? ' err-line' : '');
+    hint.textContent = ok ? '✓ ' + TEAM.title + ' · ' + TEAM.size + ' игроков' : cd.value.length >= 6 ? 'Такой команды нет. Проверь код у тренера.' : '';
+    btn.disabled = !(ok && nm.value.trim().length >= 2);
+  };
+  nm.oninput = cd.oninput = check;
+  btn.onclick = () => {
+    S.name = nm.value.trim(); S.team = TEAM.code; save(); haptic('ok'); go('home');
+  };
+};
+
+SCREENS.home = () => {
+  const t = dailyTask(), done = playedToday(t.id), rank = myRank();
+  const b = board('week'), third = b[2];
+  const acc = S.answers ? Math.round(S.correct / S.answers * 100) + '%' : '—';
+  let chase;
+  if (rank > 3) chase = '<span>До 3-го места — ' + fmt(third.score - weekPoints() + 1) + ' ' + plural(third.score - weekPoints() + 1, 'очко', 'очка', 'очков') + '</span>';
+  else if (rank > 1) chase = '<span>До 1-го места — ' + fmt(b[0].score - weekPoints() + 1) + ' очков</span>';
+  else chase = '<span>Ты лидер недели!</span>';
+  const prog = rank === 1 ? 100 : Math.min(100, Math.round(weekPoints() / (rank > 3 ? third.score : b[0].score) * 100));
+  const el = render(
+    '<div class="top"><img src="logo.png" alt="Легенда"><span class="chip" style="color:var(--orange)">' + I.flame + '<b style="color:#fff">' + S.streak + ' ' + plural(S.streak, 'день', 'дня', 'дней') + '</b></span></div>' +
+    '<div class="muted" style="font-size:17px">Привет, ' + esc(S.name) + '!</div><h1 style="margin-top:4px">Готов к тренировке?</h1>' +
+    '<div class="stats"><div class="stat"><small>Очки</small><b>' + fmt(S.points) + '</b></div><div class="stat"><small>Место</small><b>' + rank + ' <span>/' + b.length + '</span></b></div><div class="stat"><small>Точность</small><b>' + acc + '</b></div></div>' +
+    '<div class="daily"><div class="over">ЗАДАНИЕ ДНЯ · ДО 23:59</div><h2>' + esc(t.title) + '</h2><div style="font-weight:700;position:relative;z-index:1">' + esc(t.subtitle) + '</div>' +
+    '<div class="tags"><span>' + esc(t.skill) + '</span><span>' + typeName[t.type] + '</span>' + (done ? '<span>✓ пройдено</span>' : '<span>до +' + taskSize(t) * 120 + ' очков</span>') + '</div>' +
+    '<button class="btn navy" data-play="' + t.id + '">' + (done ? 'Сыграть ещё раз' : 'Начать ' + I.arrow) + '</button></div>' +
+    '<button class="task" data-tab="rating" style="margin-top:12px"><div class="dot" style="color:var(--yellow);font-weight:800">' + rank + '</div><div style="flex:1"><b style="margin-bottom:8px">' + chase + '</b><div class="bar"><i style="width:' + prog + '%"></i></div></div><span class="dim">' + I.chev + '</span></button>' +
+    '<div class="row between" style="margin:22px 0 10px"><h2>Все задания</h2><span class="muted" style="font-size:14px">' + TASKS.filter(x => everPlayed(x.id)).length + ' из ' + TASKS.length + ' пройдено</span></div>' +
+    '<div class="gap">' + TASKS.map(x => {
+      const best = S.plays.filter(p => p.id === x.id).reduce((a, p) => Math.max(a, p.pts), 0);
+      return '<button class="task" data-play="' + x.id + '"><div class="dot"><i style="background:' + (SKILLS[x.skill] || '#fff') + '"></i></div><div><b>' + esc(x.title) + '</b><small>' + esc(x.skill) + ' · ' + (everPlayed(x.id) ? 'пройдено' : typeName[x.type].toLowerCase()) + '</small></div>' +
+        (best ? '<span class="pts">+' + best + '</span>' : '<span class="pts dim">' + I.chev + '</span>') + '</button>';
+    }).join('') + '</div>' + tabbar('home'), 'tabbed');
+  el.querySelectorAll('[data-play]').forEach(b => b.onclick = () => { haptic(); startTask(b.dataset.play); });
+};
+
+SCREENS.rating = (mode = 'week') => {
+  const b = board(mode), me = b.find(r => r.me);
+  const pod = [b[1], b[0], b[2]];
+  const el = render(
+    '<div class="row between"><h1>Рейтинг</h1><img src="logo.png" style="height:30px" alt=""></div>' +
+    '<div class="seg"><button data-m="week" class="' + (mode === 'week' ? 'on' : '') + '">Эта неделя</button><button data-m="all" class="' + (mode === 'all' ? 'on' : '') + '">Всё время</button></div>' +
+    '<div class="muted" style="text-align:center;font-size:14px">' + (mode === 'week' ? 'Обнулится в понедельник · осталось ' + daysToMonday() + ' ' + plural(daysToMonday(), 'день', 'дня', 'дней') : 'Очки за всё время') + '</div>' +
+    '<div class="podium">' + pod.map((r, i) => '<div class="p ' + (i === 1 ? 'first ' : '') + (r.me ? 'me' : '') + '">' + (i === 1 ? '<div style="color:var(--yellow);font-size:26px;line-height:1">♛</div>' : '') +
+      '<div class="av">' + initials(r.name) + '</div><div style="font-size:15px;font-weight:800">' + esc(r.name) + '</div><div class="stand" style="height:' + [78, 104, 66][i] + 'px"><b>' + r.rank + '</b><small>' + fmt(r.score) + '</small></div></div>').join('') + '</div>' +
+    '<div class="list card" style="border-radius:0 0 18px 18px;padding:4px 14px">' + b.slice(3).map(r => '<div class="it"><span class="n">' + r.rank + '</span><div class="av">' + initials(r.name) + '</div><div><b>' + esc(r.name) + '</b><small>' + (r.streak ? 'серия ' + r.streak + ' ' + plural(r.streak, 'день', 'дня', 'дней') : 'сегодня не играл') + '</small></div><span class="s">' + fmt(r.score) + '</span></div>').join('') + '</div>' +
+    '<div class="mine"><b style="width:22px">' + me.rank + '</b><div class="av">' + initials(S.name) + '</div><div><b>' + esc(me.name) + '</b><small>' + (S.streak ? 'серия ' + S.streak + ' ' + plural(S.streak, 'день', 'дня', 'дней') : 'сыграй задание дня') + '</small></div><span class="s">' + fmt(me.score) + '</span></div>' +
+    '<p class="dim" style="text-align:center;font-size:12px;margin-top:14px">Пока это пример команды. Настоящий рейтинг появится, когда подключим сервер.</p>' +
+    tabbar('rating'), 'tabbed');
+  el.querySelectorAll('[data-m]').forEach(x => x.onclick = () => { haptic(); go('rating', x.dataset.m); });
+};
+
+SCREENS.profile = () => {
+  const acc = S.answers ? Math.round(S.correct / S.answers * 100) + '%' : '—';
+  const tasksDone = new Set(S.plays.map(p => p.id)).size;
+  const skillRows = Object.keys(SKILLS).map(k => {
+    const ps = S.plays.filter(p => p.skill === k);
+    const c = ps.reduce((a, p) => a + p.correct, 0), t = ps.reduce((a, p) => a + p.total, 0);
+    const has = TASKS.some(x => x.skill === k);
+    const v = t ? Math.round(c / t * 100) : 0;
+    return '<div class="skill"' + (has ? '' : ' style="opacity:.45"') + '><div class="row"><b>' + k + '</b><span class="muted">' + (t ? v + ' / 100' : has ? 'ещё не играл' : 'скоро') + '</span></div><div class="bar"><i style="width:' + v + '%;background:' + SKILLS[k] + '"></i></div></div>';
+  }).join('');
+  const el = render(
+    '<div class="row" style="gap:16px"><div class="av" style="width:84px;height:84px;font-size:30px;margin:0;background:var(--blue);border:0">' + initials(S.name) + '</div><div><h1>' + esc(S.name) + '</h1><div class="muted" style="font-size:16px;margin-top:4px">Легенда · 2016</div></div></div>' +
+    '<div class="stats" style="margin-top:22px"><div class="stat" style="text-align:center"><b>' + tasksDone + '</b><small>' + plural(tasksDone, 'задание', 'задания', 'заданий') + '</small></div><div class="stat" style="text-align:center"><b style="color:var(--orange)">' + S.streak + '</b><small>дней подряд</small></div><div class="stat" style="text-align:center"><b>' + acc + '</b><small>точность</small></div></div>' +
+    '<h2 style="margin-top:12px">Мои навыки</h2>' + skillRows +
+    '<div class="row between" style="margin-top:22px"><h2>Значки</h2><span class="muted">' + S.badges.length + ' из ' + BADGES.length + '</span></div>' +
+    '<div class="badges">' + BADGES.map(b => {
+      const got = S.badges.includes(b.id);
+      return '<button data-why="' + esc(b.why) + '"><div class="icon ' + (got ? '' : 'lock') + '" style="' + (got ? 'background:' + b.color : '') + '">' + (got ? I[b.icon] : I.lock) + '</div><small class="' + (got ? '' : 'dim') + '">' + b.name + '</small></button>';
+    }).join('') + '</div>' +
+    '<button class="btn dark" id="out" style="margin-top:28px;height:50px;font-size:15px;color:var(--muted)">Сменить имя или команду</button>' +
+    tabbar('profile'), 'tabbed');
+  el.querySelectorAll('[data-why]').forEach(b => b.onclick = () => toast(b.dataset.why));
+  el.querySelector('#out').onclick = () => go('login');
+};
+
+/* ---------- общий ход задания ---------- */
+let RUN = null;
+function startTask(id) {
+  const t = taskById(id);
+  RUN = { task: t, i: 0, total: taskSize(t), correct: 0, inRow: 0, maxRow: 0, pts: 0, fast: false, rankBefore: myRank(), counts: !playedToday(id) };
+  if (t.type === 'goals') { RUN.order = t.rounds; go('goals'); }
+  else if (t.type === 'quiz') { RUN.order = t.questions; go('quiz'); }
+  else go('match');
+}
+const header = () => '<div class="progress"><button class="close" id="x">' + I.x + '</button><div class="segs">' +
+  Array.from({ length: RUN.total }, (_, k) => '<i class="' + (k < RUN.i ? 'done' : k === RUN.i ? 'now' : '') + '"></i>').join('') +
+  '</div><span class="count">' + Math.min(RUN.i + 1, RUN.total) + '/' + RUN.total + '</span></div>';
+function wireExit(el) {
+  const exit = () => confirmExit(() => go('home'));
+  el.querySelector('#x').onclick = exit; backHandler = exit;
+}
+// Очки за один ответ: 100 за верный, +20 за скорость, ×1,5 за серию из 3 верных.
+function scoreAnswer(ok, secs) {
+  const rows = [];
+  if (ok) {
+    RUN.correct++; RUN.inRow++; RUN.maxRow = Math.max(RUN.maxRow, RUN.inRow);
+    let p = 100; rows.push(['Правильный ответ', '+100', 'p']);
+    if (secs <= 10) { p += 20; rows.push(['Бонус за скорость', '+20', 'b']); }
+    if (secs < 3) RUN.fast = true;
+    if (RUN.inRow >= 3) { p = Math.round(p * 1.5); rows.push([RUN.inRow === 3 ? 'Три верных подряд' : RUN.inRow + ' верных подряд', '×1,5', 'y']); }
+    RUN.pts += p; haptic('ok');
+  } else {
+    RUN.inRow = 0; RUN.pts += 10; rows.push(['За попытку', '+10', 'b']); haptic('error');
+  }
+  return rows;
+}
+const linesHtml = (rows) => '<div class="lines">' + rows.map(r => '<div class="line"><b>' + r[0] + '</b><span class="' + r[2] + '">' + r[1] + '</span></div>').join('') + '</div>';
+
+/* ---------- викторина ---------- */
+SCREENS.quiz = () => {
+  const q = RUN.order[RUN.i];
+  const el = render(header() +
+    '<div class="muted" style="font-size:14px">' + esc(RUN.task.title) + '</div>' +
+    '<div class="q">' + esc(q.q) + '</div>' +
+    '<div class="timer"><i id="tm"></i></div>' +
+    '<div class="opts list">' + q.options.map((o, k) => '<button class="opt" data-k="' + (k + 1) + '">' + esc(o) + '</button>').join('') + '</div>' +
+    '<div id="after"></div>');
+  wireExit(el);
+  const t0 = performance.now(), tm = el.querySelector('#tm');
+  tm.style.transition = 'width 10s linear'; requestAnimationFrame(() => requestAnimationFrame(() => tm.style.width = '0%'));
+  el.querySelectorAll('.opt').forEach(b => b.onclick = () => {
+    const pick = +b.dataset.k, ok = pick === q.answer, secs = (performance.now() - t0) / 1000;
+    tm.style.transition = 'none'; tm.style.width = getComputedStyle(tm).width;
+    el.querySelectorAll('.opt').forEach(x => { x.disabled = true; if (+x.dataset.k === q.answer) x.classList.add('ok'); });
+    if (!ok) b.classList.add('bad');
+    const rows = scoreAnswer(ok, secs);
+    const last = RUN.i === RUN.total - 1;
+    el.querySelector('#after').innerHTML =
+      '<h2 style="margin:18px 0 0;color:' + (ok ? 'var(--green)' : '#fff') + '">' + (ok ? 'Верно!' : 'Почти!') + '</h2>' +
+      (q.explain ? '<div class="explain">' + I.bulb + '<span>' + esc(q.explain) + '</span></div>' : '') +
+      '<div style="margin-top:10px">' + linesHtml(rows) + '</div>' +
+      '<button class="btn" id="nx" style="margin-top:16px">' + (last ? 'Итоги' : 'Дальше') + ' ' + I.arrow + '</button>';
+    el.querySelector('#nx').onclick = () => { RUN.i++; last ? finish() : go('quiz'); };
+    el.querySelector('#nx').scrollIntoView({ behavior: 'smooth', block: 'end' });
+  });
+};
+
+/* ---------- совмести пары ---------- */
+SCREENS.match = () => {
+  const t = RUN.task;
+  const left = shuffle(t.pairs.map((p, k) => ({ k, s: p[0] })));
+  const right = shuffle(t.pairs.map((p, k) => ({ k, s: p[1] })));
+  RUN.i = 0;
+  const el = render(header() +
+    '<h1>' + esc(t.title) + '</h1><div class="muted" style="margin-top:6px;font-size:16px">' + esc(t.subtitle) + '. Нажми слева, потом справа.</div>' +
+    '<div class="match"><div class="col"><small>' + esc(t.leftTitle || '') + '</small>' + left.map(x => '<button class="mbtn" data-side="l" data-k="' + x.k + '">' + esc(x.s) + '</button>').join('') +
+    '</div><div class="col"><small>' + esc(t.rightTitle || '') + '</small>' + right.map(x => '<button class="mbtn" data-side="r" data-k="' + x.k + '">' + esc(x.s) + '</button>').join('') + '</div></div>' +
+    '<div id="after"></div>');
+  wireExit(el);
+  const t0 = performance.now();
+  let sel = null; const missed = new Set(); let matched = 0;
+  const segs = el.querySelectorAll('.segs i'), count = el.querySelector('.count');
+  el.querySelectorAll('.mbtn').forEach(b => b.onclick = () => {
+    if (b.classList.contains('done')) return;
+    if (b.dataset.side === 'l') {
+      el.querySelectorAll('.mbtn[data-side=l]').forEach(x => x.classList.remove('sel'));
+      b.classList.add('sel'); sel = b; haptic(); return;
+    }
+    if (!sel) { toast('Сначала выбери слева'); return; }
+    if (b.dataset.k === sel.dataset.k) {
+      b.classList.add('done'); sel.classList.add('done'); sel.classList.remove('sel');
+      matched++; haptic('ok');
+      segs[matched - 1].className = 'done'; if (segs[matched]) segs[matched].className = 'now';
+      count.textContent = Math.min(matched + 1, RUN.total) + '/' + RUN.total;
+      sel = null;
+      if (matched === t.pairs.length) done();
+    } else {
+      missed.add(sel.dataset.k); haptic('error');
+      [b, sel].forEach(x => { x.classList.remove('shake'); void x.offsetWidth; x.classList.add('shake'); setTimeout(() => x.classList.remove('shake'), 400); });
+    }
+  });
+  function done() {
+    const secs = (performance.now() - t0) / 1000;
+    let rows = [];
+    // Пара засчитывается, если её собрали с первой попытки.
+    t.pairs.forEach((_, k) => { rows = scoreAnswer(!missed.has(String(k)), secs / t.pairs.length); });
+    const clean = t.pairs.length - missed.size;
+    RUN.i = RUN.total;
+    el.querySelector('#after').innerHTML =
+      '<h2 style="margin:22px 0 10px;color:' + (missed.size ? '#fff' : 'var(--green)') + '">' + (missed.size ? 'Готово! Ошибок: ' + missed.size : 'Без единой ошибки!') + '</h2>' +
+      linesHtml([['С первой попытки', clean + ' из ' + t.pairs.length, 'p'], ['Очки', '+' + RUN.pts, 'b']]) +
+      '<button class="btn" id="nx" style="margin-top:16px">Итоги ' + I.arrow + '</button>';
+    el.querySelector('#nx').onclick = finish;
+    el.querySelector('#nx').scrollIntoView({ behavior: 'smooth', block: 'end' });
+  }
+};
+
+/* ---------- игра «Шайбы в воротах» ---------- */
+const VW = 400, VH = 430, GOAL_L = 150, GOAL_R = 250, GOAL_Y = 62;
+function makeRound(n, r) {
+  const rnd = (a, b) => a + Math.random() * (b - a), ri = (a, b) => Math.floor(rnd(a, b + 1));
+  const goals = ri(Math.ceil(n * 0.3), Math.floor(n * 0.6)), rest = n - goals;
+  const posts = ri(1, Math.max(1, Math.floor(rest / 2)));
+  const kinds = shuffle([].concat(Array(goals).fill('goal'), Array(posts).fill('post'), Array(rest - posts).fill('miss')));
+  const speed = 290 + r * 45, gap = [1.05, 0.85, 0.7, 0.58, 0.48][Math.min(r, 4)];
+  let t = 0.3;
+  const shots = kinds.map(kind => {
+    const s = { kind, t0: t, sx: rnd(40, 360), sy: rnd(330, 410) };
+    if (kind === 'goal') { s.tx = rnd(GOAL_L + 14, GOAL_R - 14); s.ty = 36; }
+    else if (kind === 'post') { s.side = Math.random() < 0.5 ? -1 : 1; s.tx = s.side < 0 ? GOAL_L : GOAL_R; s.ty = GOAL_Y; }
+    else { s.tx = Math.random() < 0.5 ? rnd(40, GOAL_L - 18) : rnd(GOAL_R + 18, 360); s.ty = -20; }
+    s.d = Math.hypot(s.tx - s.sx, s.ty - s.sy) / speed;
+    t += gap * rnd(0.7, 1.3);
+    return s;
+  });
+  const end = Math.max(...shots.map(s => s.t0 + s.d)) + 1.0;
+  return { shots, goals, posts, misses: rest - posts, end };
+}
+function drawRink(ctx, lampOn) {
+  ctx.fillStyle = '#eef3f8'; ctx.fillRect(0, 0, VW, VH);
+  // линия ворот и зона вратаря
+  ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, VW, GOAL_Y);
+  ctx.beginPath(); ctx.moveTo(130, GOAL_Y); ctx.arc(200, GOAL_Y, 70, 0, Math.PI); ctx.closePath();
+  ctx.fillStyle = '#c9dbf3'; ctx.fill(); ctx.strokeStyle = '#d4566d'; ctx.lineWidth = 3; ctx.stroke();
+  ctx.fillStyle = '#d4283f'; ctx.fillRect(0, GOAL_Y - 2, VW, 4);
+  // круги вбрасывания
+  [[105, 300], [295, 300]].forEach(([x, y]) => {
+    ctx.beginPath(); ctx.arc(x, y, 64, 0, Math.PI * 2); ctx.strokeStyle = '#e07085'; ctx.lineWidth = 3; ctx.stroke();
+    ctx.beginPath(); ctx.arc(x, y, 4, 0, Math.PI * 2); ctx.fillStyle = '#e07085'; ctx.fill();
+  });
+  // сетка ворот
+  ctx.fillStyle = '#2b2f55'; ctx.fillRect(GOAL_L, 22, GOAL_R - GOAL_L, GOAL_Y - 22);
+  ctx.strokeStyle = '#9aa0c4'; ctx.lineWidth = 1;
+  for (let x = GOAL_L + 8; x < GOAL_R; x += 9) { ctx.beginPath(); ctx.moveTo(x, 22); ctx.lineTo(x, GOAL_Y); ctx.stroke(); }
+  for (let y = 28; y < GOAL_Y; y += 8) { ctx.beginPath(); ctx.moveTo(GOAL_L, y); ctx.lineTo(GOAL_R, y); ctx.stroke(); }
+  ctx.fillStyle = '#e02a40'; ctx.fillRect(GOAL_L - 4, 18, 6, GOAL_Y - 16); ctx.fillRect(GOAL_R - 2, 18, 6, GOAL_Y - 16); ctx.fillRect(GOAL_L - 4, 18, GOAL_R - GOAL_L + 8, 5);
+  // лампа гола
+  ctx.beginPath(); ctx.arc(200, 10, 8, 0, Math.PI * 2);
+  ctx.fillStyle = lampOn ? '#ff3b30' : '#7a7f9e'; ctx.fill();
+  if (lampOn) { ctx.beginPath(); ctx.arc(200, 10, 18, 0, Math.PI * 2); ctx.fillStyle = 'rgba(255,59,48,.3)'; ctx.fill(); }
+}
+function drawPuck(ctx, x, y, a) {
+  ctx.globalAlpha = a;
+  ctx.beginPath(); ctx.arc(x + 1.5, y + 3, 10, 0, Math.PI * 2); ctx.fillStyle = 'rgba(20,23,61,.18)'; ctx.fill();
+  ctx.beginPath(); ctx.arc(x, y, 10, 0, Math.PI * 2); ctx.fillStyle = '#111426'; ctx.fill();
+  ctx.beginPath(); ctx.arc(x - 3, y - 3, 3, 0, Math.PI * 2); ctx.fillStyle = '#3a3f5c'; ctx.fill();
+  ctx.globalAlpha = 1;
+}
+function puckAt(s, t) {
+  const k = (t - s.t0) / s.d;
+  if (k < 0) return null;
+  if (k <= 1) return { x: s.sx + (s.tx - s.sx) * k, y: s.sy + (s.ty - s.sy) * k, a: 1 };
+  const after = t - s.t0 - s.d;
+  if (s.kind === 'goal') return after < 0.9 ? { x: s.tx, y: s.ty, a: after < 0.6 ? 1 : 1 - (after - 0.6) / 0.3 } : null;
+  if (s.kind === 'post') return after < 0.55 ? { x: s.tx + s.side * after * 150, y: s.ty + after * 170, a: 1 - after / 0.55 } : null;
+  return null;
+}
+SCREENS.goals = () => {
+  const n = RUN.order[RUN.i], round = makeRound(n, RUN.i);
+  RUN.round = round;
+  const el = render(header() +
+    '<div class="rink"><canvas id="cv"></canvas><span class="badge">Раунд ' + (RUN.i + 1) + ' · ' + n + ' ' + plural(n, 'бросок', 'броска', 'бросков') + '</span><div class="cd" id="cd">3</div></div>' +
+    '<div class="q">Сколько было голов?</div><div class="muted" style="font-size:15px">Штанги и броски мимо не считаются</div>' +
+    '<div class="timer"><i id="tm" style="width:100%"></i></div>' +
+    '<div class="opts" id="opts"></div><div class="note" id="note">Смотри внимательно на ворота…</div>');
+  wireExit(el);
+  const cv = el.querySelector('#cv'), ctx = cv.getContext('2d'), dpr = Math.min(window.devicePixelRatio || 1, 3);
+  cv.width = VW * dpr; cv.height = VH * dpr; ctx.scale(dpr, dpr);
+  const correct = round.goals;
+  const lo = Math.max(0, correct - Math.floor(Math.random() * 4));
+  const opts = [lo, lo + 1, lo + 2, lo + 3];
+  el.querySelector('#opts').innerHTML = opts.map(v => '<button class="opt" disabled data-v="' + v + '">' + v + '</button>').join('');
+  let raf, start = null, stopped = false, timers = [];
+  const cd = el.querySelector('#cd');
+  drawRink(ctx, false);
+  [[600, '2'], [1200, '1'], [1800, null]].forEach(([ms, txt]) => timers.push(setTimeout(() => {
+    if (txt) { cd.textContent = txt; haptic(); } else { cd.remove(); start = performance.now(); raf = requestAnimationFrame(frame); }
+  }, ms)));
+  function frame(now) {
+    const t = (now - start) / 1000;
+    let lamp = false;
+    round.shots.forEach(s => { if (s.kind === 'goal' && t >= s.t0 + s.d && t < s.t0 + s.d + 0.7) lamp = true; });
+    drawRink(ctx, lamp);
+    round.shots.forEach(s => { const p = puckAt(s, t); if (p) drawPuck(ctx, p.x, p.y, Math.max(0, p.a)); });
+    if (t < round.end) raf = requestAnimationFrame(frame);
+    else stop();
+  }
+  function stop() {
+    if (stopped) return; stopped = true;
+    el.querySelector('.rink').insertAdjacentHTML('beforeend', '<span class="stop">Стоп!</span>');
+    el.querySelector('#note').textContent = 'Ответь за 10 секунд, чтобы получить бонус за скорость';
+    const tm = el.querySelector('#tm'); tm.style.transition = 'width 10s linear'; requestAnimationFrame(() => requestAnimationFrame(() => tm.style.width = '0%'));
+    const t0 = performance.now(); haptic();
+    el.querySelectorAll('.opt').forEach(b => {
+      b.disabled = false;
+      b.onclick = () => {
+        el.querySelectorAll('.opt').forEach(x => x.disabled = true);
+        b.classList.add('pick');
+        const v = +b.dataset.v, secs = (performance.now() - t0) / 1000;
+        const rows = scoreAnswer(v === correct, secs);
+        setTimeout(() => go('roundResult', { ok: v === correct, v, secs, rows }), 250);
+      };
+    });
+  }
+  cleanup = () => { cancelAnimationFrame(raf); timers.forEach(clearTimeout); };
+};
+SCREENS.roundResult = (r) => {
+  const R = RUN.round, last = RUN.i === RUN.total - 1;
+  const segs = '<div class="progress"><div class="segs">' + Array.from({ length: RUN.total }, (_, k) => '<i class="' + (k <= RUN.i ? 'done' : '') + '"></i>').join('') + '</div></div>';
+  const confetti = r.ok ? Array.from({ length: 14 }, (_, k) => '<i class="confetti" style="left:' + (8 + Math.random() * 84) + '%;top:' + (60 + Math.random() * 200) + 'px;background:' + ['#ec6a3f', '#8fd3ff', '#ffd23f'][k % 3] + ';animation-delay:' + (Math.random() * .3) + 's"></i>').join('') : '';
+  const el = render(segs + '<div class="result" style="position:relative">' + confetti +
+    (r.ok
+      ? '<div class="halo ok"><div>' + I.check.replace(/28/g, '84') + '</div></div><h1>Верно!</h1><p>Было ' + R.goals + ' ' + plural(R.goals, 'гол', 'гола', 'голов') + '. Ты ответил за ' + Math.max(1, Math.round(r.secs)) + ' ' + plural(Math.max(1, Math.round(r.secs)), 'секунду', 'секунды', 'секунд') + '.</p>'
+      : '<div class="halo no"><div style="color:var(--blue)">' + I.target.replace(/28/g, '72') + '</div></div><h1>Почти!</h1><p>Было ' + R.goals + ' ' + plural(R.goals, 'гол', 'гола', 'голов') + ', а ты выбрал ' + r.v + '.<br>' + (r.v < R.goals ? 'Одна шайба проскочила незаметно.' : 'Штанга — это не гол.') + '</p>' +
+        '<div class="explain" style="text-align:left;margin:0 0 12px">' + I.bulb + '<span>Подсказка: ' + esc(RUN.task.hint || '') + '</span></div>') +
+    linesHtml(r.rows) +
+    '<div class="recap" style="margin-top:12px"><small>РАЗБОР РАУНДА</small><div class="g"><div><b style="color:var(--orange)">' + R.goals + '</b>' + plural(R.goals, 'гол', 'гола', 'голов') + '</div><div><b>' + R.posts + '</b>' + plural(R.posts, 'штанга', 'штанги', 'штанг') + '</div><div><b>' + R.misses + '</b>мимо</div></div></div>' +
+    '</div><div class="spacer"></div><button class="btn" id="nx">' + (last ? 'Итоги' : (r.ok ? 'Раунд ' : 'Дальше, раунд ') + (RUN.i + 2)) + ' ' + I.arrow + '</button>');
+  backHandler = () => confirmExit(() => go('home'));
+  el.querySelector('#nx').onclick = () => { RUN.i++; last ? finish() : go('goals'); };
+};
+
+/* ---------- итог задания ---------- */
+function finish() {
+  const t = RUN.task, today = dayKey();
+  const pts = RUN.counts ? RUN.pts : 0;
+  if (RUN.counts) {
+    if (S.lastDay !== today) S.streak = S.lastDay === yesterdayKey() ? S.streak + 1 : 1;
+    S.lastDay = today;
+    S.points += pts;
+  }
+  S.answers += RUN.total; S.correct += RUN.correct;
+  S.plays.push({ id: t.id, date: today, correct: RUN.correct, total: RUN.total, pts, skill: t.skill });
+  const fresh = [];
+  const give = (id, cond) => { if (cond && !S.badges.includes(id)) { S.badges.push(id); fresh.push(id); } };
+  give('first', true);
+  give('sniper', RUN.maxRow >= 3);
+  give('perfect', RUN.correct === RUN.total);
+  give('eye', t.type === 'goals' && RUN.correct === RUN.total);
+  give('fast', RUN.fast);
+  give('scholar', new Set(S.plays.map(p => p.id)).size >= 3);
+  give('week', S.streak >= 7);
+  give('captain', myRank() === 1);
+  save();
+  RUN.result = { pts, fresh, rankAfter: myRank() };
+  go('summary');
+}
+SCREENS.summary = () => {
+  const r = RUN.result, up = RUN.rankBefore - r.rankAfter;
+  const C = 2 * Math.PI * 80, part = RUN.correct / RUN.total;
+  const top = board('week').slice(0, 3);
+  const meTop = top.some(x => x.me);
+  const rowsTop = (meTop ? top : top.concat(board('week').find(x => x.me)));
+  const el = render(
+    '<div style="text-align:center;color:var(--muted);letter-spacing:.1em;font-size:13px;font-weight:800">' + (RUN.counts ? 'ЗАДАНИЕ ПРОЙДЕНО' : 'ТРЕНИРОВКА · БЕЗ ОЧКОВ') + '</div>' +
+    '<h1 style="text-align:center;margin-top:8px;font-size:30px">' + (part >= 0.6 ? 'Отличная игра' : 'Хорошая попытка') + ', ' + esc(S.name) + '!</h1>' +
+    '<div class="ring"><svg width="190" height="190"><circle cx="95" cy="95" r="80" fill="none" stroke="#2c3372" stroke-width="18"/><circle cx="95" cy="95" r="80" fill="none" stroke="#ec6a3f" stroke-width="18" stroke-linecap="round" stroke-dasharray="' + (C * part) + ' ' + C + '"/></svg><div><b>' + RUN.correct + '/' + RUN.total + '</b><span class="muted">верно</span></div></div>' +
+    '<div class="two"><div class="card"><small>Очки за задание</small><b style="color:var(--orange)">+' + r.pts + '</b></div><div class="card"><small>Место в команде</small><b>' + r.rankAfter + (up > 0 ? ' <span style="color:var(--blue);font-size:20px">↑' + up + '</span>' : '') + '</b></div></div>' +
+    (!RUN.counts ? '<p class="muted" style="text-align:center;font-size:14px">Очки за это задание сегодня уже начислены. Повтор — для тренировки.</p>' : '') +
+    r.fresh.map(id => { const b = BADGES.find(x => x.id === id); return '<div class="newbadge" style="margin-top:12px"><div class="icon" style="background:' + b.color + '">' + I[b.icon] + '</div><div><small>НОВЫЙ ЗНАЧОК</small><div style="font-size:20px;font-weight:800">' + b.name + '</div><div class="muted" style="font-size:14px">' + b.why + '</div></div></div>'; }).join('') +
+    '<div class="card row" style="margin-top:12px;color:var(--orange)">' + I.flame + '<span style="color:#fff;font-size:16px">Серия <b>' + S.streak + ' ' + plural(S.streak, 'день', 'дня', 'дней') + '</b>. Завтра новое задание.</span></div>' +
+    '<div class="card top3" style="margin-top:12px;padding:6px">' + rowsTop.map(x => '<div class="r ' + (x.me ? 'me' : '') + '"><span>' + x.rank + '</span><span>' + esc(x.name) + '</span><span>' + fmt(x.score) + '</span></div>').join('') + '</div>' +
+    '<div class="spacer"></div><div class="gap"><button class="btn" data-tab="rating">Смотреть рейтинг</button><button class="btn dark" data-tab="home">На главную</button></div>');
+  if (RUN.correct > 0) haptic('ok');
+};
+
+/* ---------- запуск ---------- */
+(async () => {
+  try {
+    [S] = await Promise.all([loadState(), loadTasks()]);
+  } catch (e) {
+    app.innerHTML = '<div class="screen"><h2>Не удалось загрузить задания</h2><p class="muted">Проверь интернет и открой приложение заново.</p></div>';
+    return;
+  }
+  S = Object.assign(blank(), S);
+  go(S.name && S.team ? 'home' : 'login');
+})();
+</script>
+</body>
+</html>
