@@ -355,7 +355,7 @@ SCREENS.login = () => {
     '<div class="spacer"></div>' +
     '<label for="cd">Код команды от тренера</label><input id="cd" autocomplete="off" maxlength="20" placeholder="Например, ЛЕГЕНДА-2016" style="text-transform:uppercase;letter-spacing:.04em">' +
     '<div class="ok-line" id="hint"></div>' +
-    '<div id="who" hidden><label for="q">Найди себя в списке</label><input id="q" autocomplete="off" placeholder="Имя или номер"><div class="pick" id="list"></div></div>' +
+    '<div id="who" hidden><label for="q">Найди себя в списке</label><input id="q" autocomplete="off" placeholder="Имя, фамилия или номер"><div class="pick" id="list"></div></div>' +
     '<button class="btn" id="go" style="margin-top:14px" disabled>Вступить в команду</button>' +
     '<p class="dim" style="text-align:center;font-size:14px;margin:14px 0 0">Мы сохраняем только имя и результаты игр.</p>', 'login');
   const cd = el.querySelector('#cd'), hint = el.querySelector('#hint'), btn = el.querySelector('#go');
@@ -365,7 +365,7 @@ SCREENS.login = () => {
   const drawList = () => {
     const f = lower(q.value.trim().replace('№', ''));
     const rows = TEAM.players.filter(p => !f || lower(p.short).includes(f) || String(p.num).startsWith(f))
-      .sort((a, b) => a.short.localeCompare(b.short, 'ru'));
+      .sort((a, b) => (a.last || a.short).localeCompare(b.last || b.short, 'ru'));
     list.innerHTML = rows.map(p => '<button data-id="' + p.id + '" class="' + (p.id === picked ? 'on' : '') + '"><span class="av">' + p.num + '</span>' + esc(p.short) + '<small>№' + p.num + '</small></button>').join('') ||
       '<div class="dim" style="padding:12px">Не нашли. Спроси у тренера.</div>';
   };
@@ -413,7 +413,7 @@ SCREENS.home = () => {
 
 SCREENS.rating = () => {
   const m = me();
-  const rows = TEAM.players.slice().sort((a, b) => a.short.localeCompare(b.short, 'ru'));
+  const rows = TEAM.players.slice().sort((a, b) => (a.last || a.short).localeCompare(b.last || b.short, 'ru'));
   render(
     '<div class="row between"><h1>Рейтинг</h1><img src="logo.png" style="height:30px" alt=""></div>' +
     '<div class="muted" style="margin-top:6px;font-size:15px">' + esc(TEAM.title) + ' · ' + TEAM.players.length + ' ' + plural(TEAM.players.length, 'игрок', 'игрока', 'игроков') + (TEAM.coach ? ' · тренер ' + esc(TEAM.coach) : '') + '</div>' +
