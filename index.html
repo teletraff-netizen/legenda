@@ -211,9 +211,9 @@ const haptic = (kind) => {
 /* ---------- данные команды (демо, пока нет сервера) ---------- */
 const TEAM = { code: 'ЛЕГЕНДА-2016', title: 'Команда «Легенда», 2016 г. р.', size: 28 };
 const DEMO = [
-  ['Артём С.', 1610, 3610, 8], ['Даня П.', 1350, 3150, 5], ['Егор В.', 1180, 2980, 4], ['Тимур М.', 1120, 2910, 7],
-  ['Илья Л.', 960, 2760, 2], ['Макар Б.', 840, 2640, 5], ['Лёва Г.', 600, 2400, 0], ['Саша Р.', 520, 2210, 3],
-  ['Вова Ш.', 310, 1980, 0], ['Никита З.', 280, 1720, 1], ['Рома Д.', 240, 1510, 2], ['Федя К.', 120, 1240, 0]
+  ['Артём С.', 4, 5, 8], ['Даня П.', 4, 5, 5], ['Егор В.', 3, 4, 4], ['Тимур М.', 3, 4, 7],
+  ['Илья Л.', 3, 3, 2], ['Макар Б.', 2, 3, 5], ['Лёва Г.', 2, 3, 0], ['Саша Р.', 2, 2, 3],
+  ['Вова Ш.', 1, 2, 0], ['Никита З.', 1, 1, 1], ['Рома Д.', 1, 1, 2], ['Федя К.', 0, 1, 0]
 ];
 const SKILLS = {
   'Слежение': '#ec6a3f', 'Счёт': '#8fd3ff', 'Память': '#ffd23f', 'Реакция': '#c8c9ef', 'Знания': '#7be0a4', 'Теория': '#ffb38a'
@@ -261,7 +261,6 @@ const dayKey = (d = new Date()) => d.getFullYear() + '-' + String(d.getMonth() +
 const yesterdayKey = () => { const d = new Date(); d.setDate(d.getDate() - 1); return dayKey(d); };
 const mondayKey = () => { const d = new Date(); const w = (d.getDay() + 6) % 7; d.setDate(d.getDate() - w); return dayKey(d); };
 const daysToMonday = () => 7 - ((new Date().getDay() + 6) % 7);
-const dayNum = () => Math.floor((Date.now() - new Date().getTimezoneOffset() * 60000) / 864e5);
 
 /* ---------- задания ---------- */
 let TASKS = [];
@@ -271,9 +270,10 @@ async function loadTasks() {
   TASKS = await Promise.all(idx.tasks.map(f => fetch('tasks/' + f, { cache: 'no-store' }).then(r => r.json())));
 }
 const taskById = (id) => TASKS.find(t => t.id === id);
-const dailyTask = () => TASKS[dayNum() % TASKS.length];
-const playedToday = (id) => S.plays.some(p => p.id === id && p.date === dayKey() && p.pts > 0);
+// Каждое задание проходится один раз; следующее — первое непройденное по порядку из tasks/index.json.
 const everPlayed = (id) => S.plays.some(p => p.id === id);
+const nextTask = () => TASKS.find(t => !everPlayed(t.id));
+const playOf = (id) => S.plays.find(p => p.id === id);
 const taskSize = (t) => t.type === 'goals' ? t.rounds.length : t.type === 'quiz' ? t.questions.length : t.pairs.length;
 const typeName = { goals: 'Игра на внимание', quiz: 'Викторина', match: 'Совмести пары' };
 
@@ -379,27 +379,30 @@ SCREENS.login = () => {
 };
 
 SCREENS.home = () => {
-  const t = dailyTask(), done = playedToday(t.id), rank = myRank();
+  const t = nextTask(), rank = myRank();
   const b = board('week'), third = b[2];
   const acc = S.answers ? Math.round(S.correct / S.answers * 100) + '%' : '—';
   let chase;
-  if (rank > 3) chase = '<span>До 3-го места — ' + fmt(third.score - weekPoints() + 1) + ' ' + plural(third.score - weekPoints() + 1, 'очко', 'очка', 'очков') + '</span>';
-  else if (rank > 1) chase = '<span>До 1-го места — ' + fmt(b[0].score - weekPoints() + 1) + ' очков</span>';
+  const need = (score) => { const n = Math.max(1, score - weekPoints()); return n + ' ' + plural(n, 'очко', 'очка', 'очков'); };
+  if (rank > 3) chase = '<span>До 3-го места — ' + need(third.score) + '</span>';
+  else if (rank > 1) chase = '<span>До 1-го места — ' + need(b[0].score) + '</span>';
   else chase = '<span>Ты лидер недели!</span>';
   const prog = rank === 1 ? 100 : Math.min(100, Math.round(weekPoints() / (rank > 3 ? third.score : b[0].score) * 100));
   const el = render(
     '<div class="top"><img src="logo.png" alt="Легенда"><span class="chip" style="color:var(--orange)">' + I.flame + '<b style="color:#fff">' + S.streak + ' ' + plural(S.streak, 'день', 'дня', 'дней') + '</b></span></div>' +
     '<div class="muted" style="font-size:17px">Привет, ' + esc(S.name) + '!</div><h1 style="margin-top:4px">Готов к тренировке?</h1>' +
     '<div class="stats"><div class="stat"><small>Очки</small><b>' + fmt(S.points) + '</b></div><div class="stat"><small>Место</small><b>' + rank + ' <span>/' + b.length + '</span></b></div><div class="stat"><small>Точность</small><b>' + acc + '</b></div></div>' +
-    '<div class="daily"><div class="over">ЗАДАНИЕ ДНЯ · ДО 23:59</div><h2>' + esc(t.title) + '</h2><div style="font-weight:700;position:relative;z-index:1">' + esc(t.subtitle) + '</div>' +
-    '<div class="tags"><span>' + esc(t.skill) + '</span><span>' + typeName[t.type] + '</span>' + (done ? '<span>✓ пройдено</span>' : '<span>до +' + taskSize(t) * 120 + ' очков</span>') + '</div>' +
-    '<button class="btn navy" data-play="' + t.id + '">' + (done ? 'Сыграть ещё раз' : 'Начать ' + I.arrow) + '</button></div>' +
+    (t
+      ? '<div class="daily"><div class="over">НОВОЕ ЗАДАНИЕ · +1 ОЧКО</div><h2>' + esc(t.title) + '</h2><div style="font-weight:700;position:relative;z-index:1">' + esc(t.subtitle) + '</div>' +
+        '<div class="tags"><span>' + esc(t.skill) + '</span><span>' + typeName[t.type] + '</span><span>один раз</span></div>' +
+        '<button class="btn navy" data-play="' + t.id + '">Начать ' + I.arrow + '</button></div>'
+      : '<div class="daily"><div class="over">ВСЁ ПРОЙДЕНО</div><h2>Молодец!</h2><div style="font-weight:700;position:relative;z-index:1">Ты прошёл все задания. Скоро появятся новые.</div></div>') +
     '<button class="task" data-tab="rating" style="margin-top:12px"><div class="dot" style="color:var(--yellow);font-weight:800">' + rank + '</div><div style="flex:1"><b style="margin-bottom:8px">' + chase + '</b><div class="bar"><i style="width:' + prog + '%"></i></div></div><span class="dim">' + I.chev + '</span></button>' +
     '<div class="row between" style="margin:22px 0 10px"><h2>Все задания</h2><span class="muted" style="font-size:14px">' + TASKS.filter(x => everPlayed(x.id)).length + ' из ' + TASKS.length + ' пройдено</span></div>' +
     '<div class="gap">' + TASKS.map(x => {
-      const best = S.plays.filter(p => p.id === x.id).reduce((a, p) => Math.max(a, p.pts), 0);
-      return '<button class="task" data-play="' + x.id + '"><div class="dot"><i style="background:' + (SKILLS[x.skill] || '#fff') + '"></i></div><div><b>' + esc(x.title) + '</b><small>' + esc(x.skill) + ' · ' + (everPlayed(x.id) ? 'пройдено' : typeName[x.type].toLowerCase()) + '</small></div>' +
-        (best ? '<span class="pts">+' + best + '</span>' : '<span class="pts dim">' + I.chev + '</span>') + '</button>';
+      const p = playOf(x.id);
+      return '<button class="task" data-play="' + x.id + '"' + (p ? ' style="opacity:.6"' : '') + '><div class="dot"><i style="background:' + (SKILLS[x.skill] || '#fff') + '"></i></div><div><b>' + esc(x.title) + '</b><small>' + esc(x.skill) + ' · ' + (p ? 'пройдено · ' + p.correct + ' из ' + p.total + ' верно' : typeName[x.type].toLowerCase()) + '</small></div>' +
+        (p ? '<span class="pts" style="color:var(--green)">✓</span>' : '<span class="pts dim">' + I.chev + '</span>') + '</button>';
     }).join('') + '</div>' + tabbar('home'), 'tabbed');
   el.querySelectorAll('[data-play]').forEach(b => b.onclick = () => { haptic(); startTask(b.dataset.play); });
 };
@@ -449,7 +452,8 @@ SCREENS.profile = () => {
 let RUN = null;
 function startTask(id) {
   const t = taskById(id);
-  RUN = { task: t, i: 0, total: taskSize(t), correct: 0, inRow: 0, maxRow: 0, pts: 0, fast: false, rankBefore: myRank(), counts: !playedToday(id) };
+  if (everPlayed(id)) { const p = playOf(id); toast('Уже пройдено: ' + p.correct + ' из ' + p.total + ' верно'); return; }
+  RUN = { task: t, i: 0, total: taskSize(t), correct: 0, inRow: 0, maxRow: 0, fast: false, rankBefore: myRank() };
   if (t.type === 'goals') { RUN.order = t.rounds; go('goals'); }
   else if (t.type === 'quiz') { RUN.order = t.questions; go('quiz'); }
   else go('match');
@@ -461,20 +465,15 @@ function wireExit(el) {
   const exit = () => confirmExit(() => go('home'));
   el.querySelector('#x').onclick = exit; backHandler = exit;
 }
-// Очки за один ответ: 100 за верный, +20 за скорость, ×1,5 за серию из 3 верных.
+// Считаем верные ответы для итога и значков. Очки — только за пройденное задание (+1).
 function scoreAnswer(ok, secs) {
-  const rows = [];
   if (ok) {
     RUN.correct++; RUN.inRow++; RUN.maxRow = Math.max(RUN.maxRow, RUN.inRow);
-    let p = 100; rows.push(['Правильный ответ', '+100', 'p']);
-    if (secs <= 10) { p += 20; rows.push(['Бонус за скорость', '+20', 'b']); }
     if (secs < 3) RUN.fast = true;
-    if (RUN.inRow >= 3) { p = Math.round(p * 1.5); rows.push([RUN.inRow === 3 ? 'Три верных подряд' : RUN.inRow + ' верных подряд', '×1,5', 'y']); }
-    RUN.pts += p; haptic('ok');
+    haptic('ok');
   } else {
-    RUN.inRow = 0; RUN.pts += 10; rows.push(['За попытку', '+10', 'b']); haptic('error');
+    RUN.inRow = 0; haptic('error');
   }
-  return rows;
 }
 const linesHtml = (rows) => '<div class="lines">' + rows.map(r => '<div class="line"><b>' + r[0] + '</b><span class="' + r[2] + '">' + r[1] + '</span></div>').join('') + '</div>';
 
@@ -495,12 +494,11 @@ SCREENS.quiz = () => {
     tm.style.transition = 'none'; tm.style.width = getComputedStyle(tm).width;
     el.querySelectorAll('.opt').forEach(x => { x.disabled = true; if (+x.dataset.k === q.answer) x.classList.add('ok'); });
     if (!ok) b.classList.add('bad');
-    const rows = scoreAnswer(ok, secs);
+    scoreAnswer(ok, secs);
     const last = RUN.i === RUN.total - 1;
     el.querySelector('#after').innerHTML =
       '<h2 style="margin:18px 0 0;color:' + (ok ? 'var(--green)' : '#fff') + '">' + (ok ? 'Верно!' : 'Почти!') + '</h2>' +
       (q.explain ? '<div class="explain">' + I.bulb + '<span>' + esc(q.explain) + '</span></div>' : '') +
-      '<div style="margin-top:10px">' + linesHtml(rows) + '</div>' +
       '<button class="btn" id="nx" style="margin-top:16px">' + (last ? 'Итоги' : 'Дальше') + ' ' + I.arrow + '</button>';
     el.querySelector('#nx').onclick = () => { RUN.i++; last ? finish() : go('quiz'); };
     el.querySelector('#nx').scrollIntoView({ behavior: 'smooth', block: 'end' });
@@ -543,14 +541,13 @@ SCREENS.match = () => {
   });
   function done() {
     const secs = (performance.now() - t0) / 1000;
-    let rows = [];
     // Пара засчитывается, если её собрали с первой попытки.
-    t.pairs.forEach((_, k) => { rows = scoreAnswer(!missed.has(String(k)), secs / t.pairs.length); });
+    t.pairs.forEach((_, k) => scoreAnswer(!missed.has(String(k)), secs / t.pairs.length));
     const clean = t.pairs.length - missed.size;
     RUN.i = RUN.total;
     el.querySelector('#after').innerHTML =
       '<h2 style="margin:22px 0 10px;color:' + (missed.size ? '#fff' : 'var(--green)') + '">' + (missed.size ? 'Готово! Ошибок: ' + missed.size : 'Без единой ошибки!') + '</h2>' +
-      linesHtml([['С первой попытки', clean + ' из ' + t.pairs.length, 'p'], ['Очки', '+' + RUN.pts, 'b']]) +
+      linesHtml([['С первой попытки', clean + ' из ' + t.pairs.length, 'p']]) +
       '<button class="btn" id="nx" style="margin-top:16px">Итоги ' + I.arrow + '</button>';
     el.querySelector('#nx').onclick = finish;
     el.querySelector('#nx').scrollIntoView({ behavior: 'smooth', block: 'end' });
@@ -659,8 +656,8 @@ SCREENS.goals = () => {
         el.querySelectorAll('.opt').forEach(x => x.disabled = true);
         b.classList.add('pick');
         const v = +b.dataset.v, secs = (performance.now() - t0) / 1000;
-        const rows = scoreAnswer(v === correct, secs);
-        setTimeout(() => go('roundResult', { ok: v === correct, v, secs, rows }), 250);
+        scoreAnswer(v === correct, secs);
+        setTimeout(() => go('roundResult', { ok: v === correct, v, secs }), 250);
       };
     });
   }
@@ -675,7 +672,6 @@ SCREENS.roundResult = (r) => {
       ? '<div class="halo ok"><div>' + I.check.replace(/28/g, '84') + '</div></div><h1>Верно!</h1><p>Было ' + R.goals + ' ' + plural(R.goals, 'гол', 'гола', 'голов') + '. Ты ответил за ' + Math.max(1, Math.round(r.secs)) + ' ' + plural(Math.max(1, Math.round(r.secs)), 'секунду', 'секунды', 'секунд') + '.</p>'
       : '<div class="halo no"><div style="color:var(--blue)">' + I.target.replace(/28/g, '72') + '</div></div><h1>Почти!</h1><p>Было ' + R.goals + ' ' + plural(R.goals, 'гол', 'гола', 'голов') + ', а ты выбрал ' + r.v + '.<br>' + (r.v < R.goals ? 'Одна шайба проскочила незаметно.' : 'Штанга — это не гол.') + '</p>' +
         '<div class="explain" style="text-align:left;margin:0 0 12px">' + I.bulb + '<span>Подсказка: ' + esc(RUN.task.hint || '') + '</span></div>') +
-    linesHtml(r.rows) +
     '<div class="recap" style="margin-top:12px"><small>РАЗБОР РАУНДА</small><div class="g"><div><b style="color:var(--orange)">' + R.goals + '</b>' + plural(R.goals, 'гол', 'гола', 'голов') + '</div><div><b>' + R.posts + '</b>' + plural(R.posts, 'штанга', 'штанги', 'штанг') + '</div><div><b>' + R.misses + '</b>мимо</div></div></div>' +
     '</div><div class="spacer"></div><button class="btn" id="nx">' + (last ? 'Итоги' : (r.ok ? 'Раунд ' : 'Дальше, раунд ') + (RUN.i + 2)) + ' ' + I.arrow + '</button>');
   backHandler = () => confirmExit(() => go('home'));
@@ -685,12 +681,10 @@ SCREENS.roundResult = (r) => {
 /* ---------- итог задания ---------- */
 function finish() {
   const t = RUN.task, today = dayKey();
-  const pts = RUN.counts ? RUN.pts : 0;
-  if (RUN.counts) {
-    if (S.lastDay !== today) S.streak = S.lastDay === yesterdayKey() ? S.streak + 1 : 1;
-    S.lastDay = today;
-    S.points += pts;
-  }
+  const pts = 1;
+  if (S.lastDay !== today) S.streak = S.lastDay === yesterdayKey() ? S.streak + 1 : 1;
+  S.lastDay = today;
+  S.points += pts;
   S.answers += RUN.total; S.correct += RUN.correct;
   S.plays.push({ id: t.id, date: today, correct: RUN.correct, total: RUN.total, pts, skill: t.skill });
   const fresh = [];
@@ -714,11 +708,10 @@ SCREENS.summary = () => {
   const meTop = top.some(x => x.me);
   const rowsTop = (meTop ? top : top.concat(board('week').find(x => x.me)));
   const el = render(
-    '<div style="text-align:center;color:var(--muted);letter-spacing:.1em;font-size:13px;font-weight:800">' + (RUN.counts ? 'ЗАДАНИЕ ПРОЙДЕНО' : 'ТРЕНИРОВКА · БЕЗ ОЧКОВ') + '</div>' +
+    '<div style="text-align:center;color:var(--muted);letter-spacing:.1em;font-size:13px;font-weight:800">' + 'ЗАДАНИЕ ПРОЙДЕНО' + '</div>' +
     '<h1 style="text-align:center;margin-top:8px;font-size:30px">' + (part >= 0.6 ? 'Отличная игра' : 'Хорошая попытка') + ', ' + esc(S.name) + '!</h1>' +
     '<div class="ring"><svg width="190" height="190"><circle cx="95" cy="95" r="80" fill="none" stroke="#2c3372" stroke-width="18"/><circle cx="95" cy="95" r="80" fill="none" stroke="#ec6a3f" stroke-width="18" stroke-linecap="round" stroke-dasharray="' + (C * part) + ' ' + C + '"/></svg><div><b>' + RUN.correct + '/' + RUN.total + '</b><span class="muted">верно</span></div></div>' +
     '<div class="two"><div class="card"><small>Очки за задание</small><b style="color:var(--orange)">+' + r.pts + '</b></div><div class="card"><small>Место в команде</small><b>' + r.rankAfter + (up > 0 ? ' <span style="color:var(--blue);font-size:20px">↑' + up + '</span>' : '') + '</b></div></div>' +
-    (!RUN.counts ? '<p class="muted" style="text-align:center;font-size:14px">Очки за это задание сегодня уже начислены. Повтор — для тренировки.</p>' : '') +
     r.fresh.map(id => { const b = BADGES.find(x => x.id === id); return '<div class="newbadge" style="margin-top:12px"><div class="icon" style="background:' + b.color + '">' + I[b.icon] + '</div><div><small>НОВЫЙ ЗНАЧОК</small><div style="font-size:20px;font-weight:800">' + b.name + '</div><div class="muted" style="font-size:14px">' + b.why + '</div></div></div>'; }).join('') +
     '<div class="card row" style="margin-top:12px;color:var(--orange)">' + I.flame + '<span style="color:#fff;font-size:16px">Серия <b>' + S.streak + ' ' + plural(S.streak, 'день', 'дня', 'дней') + '</b>. Завтра новое задание.</span></div>' +
     '<div class="card top3" style="margin-top:12px;padding:6px">' + rowsTop.map(x => '<div class="r ' + (x.me ? 'me' : '') + '"><span>' + x.rank + '</span><span>' + esc(x.name) + '</span><span>' + fmt(x.score) + '</span></div>').join('') + '</div>' +
