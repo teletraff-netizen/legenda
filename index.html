@@ -186,6 +186,12 @@ input:focus{border-color:var(--orange)}
 .modal{position:fixed;inset:0;background:rgba(8,10,32,.7);display:flex;align-items:flex-end;justify-content:center;z-index:10;padding:16px}
 .modal .sheet{background:var(--card);border-radius:22px;padding:22px 18px calc(var(--bottom) + 18px);width:100%;max-width:440px}
 .modal p{margin:8px 0 18px}
+.pick{display:flex;flex-direction:column;gap:6px;max-height:250px;overflow-y:auto;margin-top:10px;padding-right:2px}
+.pick button{display:flex;align-items:center;gap:12px;background:var(--card);border:2px solid transparent;border-radius:14px;padding:8px 12px;font-size:17px;font-weight:700;text-align:left}
+.pick button small{margin-left:auto;color:var(--muted);font-size:14px}
+.pick button .av{width:36px;height:36px;font-size:14px;margin:0;border:0;background:var(--card2);color:#fff}
+.pick button.on{border-color:var(--orange);background:var(--card2)}
+.pick button.on .av{background:var(--orange);color:#14173d}
 .toast{position:fixed;left:50%;top:calc(var(--top) + 14px);transform:translateX(-50%);background:#fff;color:#14173d;padding:10px 16px;border-radius:12px;font-weight:800;z-index:9}
 </style>
 </head>
@@ -209,12 +215,10 @@ const haptic = (kind) => {
 };
 
 /* ---------- данные команды (демо, пока нет сервера) ---------- */
-const TEAM = { code: 'ЛЕГЕНДА-2016', title: 'Команда «Легенда», 2016 г. р.', size: 28 };
-const DEMO = [
-  ['Артём С.', 4, 5, 8], ['Даня П.', 4, 5, 5], ['Егор В.', 3, 4, 4], ['Тимур М.', 3, 4, 7],
-  ['Илья Л.', 3, 3, 2], ['Макар Б.', 2, 3, 5], ['Лёва Г.', 2, 3, 0], ['Саша Р.', 2, 2, 3],
-  ['Вова Ш.', 1, 2, 0], ['Никита З.', 1, 1, 1], ['Рома Д.', 1, 1, 2], ['Федя К.', 0, 1, 0]
-];
+// Команда: код для входа и состав берутся из team.json (имя, буква фамилии, номер).
+let TEAM = { code: 'ЛЕГЕНДА-2016', title: 'Легенда 2016', coach: '', players: [] };
+// Пока нет сервера, очки других игроков не видны — рейтинг показывает только свои.
+const LIVE = false;
 const SKILLS = {
   'Слежение': '#ec6a3f', 'Счёт': '#8fd3ff', 'Память': '#ffd23f', 'Реакция': '#c8c9ef', 'Знания': '#7be0a4', 'Теория': '#ffb38a'
 };
@@ -265,7 +269,8 @@ const daysToMonday = () => 7 - ((new Date().getDay() + 6) % 7);
 /* ---------- задания ---------- */
 let TASKS = [];
 async function loadTasks() {
-  if (window.EMBEDDED_TASKS) { TASKS = window.EMBEDDED_TASKS; return; }
+  if (window.EMBEDDED_TASKS) { TASKS = window.EMBEDDED_TASKS; TEAM = window.EMBEDDED_TEAM; return; }
+  TEAM = await fetch('team.json', { cache: 'no-store' }).then(r => r.json());
   const idx = await fetch('tasks/index.json', { cache: 'no-store' }).then(r => r.json());
   TASKS = await Promise.all(idx.tasks.map(f => fetch('tasks/' + f, { cache: 'no-store' }).then(r => r.json())));
 }
@@ -277,19 +282,9 @@ const playOf = (id) => S.plays.find(p => p.id === id);
 const taskSize = (t) => t.type === 'goals' ? t.rounds.length : t.type === 'quiz' ? t.questions.length : t.pairs.length;
 const typeName = { goals: 'Игра на внимание', quiz: 'Викторина', match: 'Совмести пары' };
 
-/* ---------- рейтинг ---------- */
-const weekPoints = () => { const m = mondayKey(); return S.plays.filter(p => p.date >= m).reduce((a, p) => a + p.pts, 0); };
-function board(mode) {
-  const me = { name: shortName(S.name) + ' · ты', me: true, week: weekPoints(), all: S.points, streak: S.streak };
-  const rows = DEMO.map(([name, week, all, streak]) => ({ name, week, all, streak })).concat(me);
-  const k = mode === 'all' ? 'all' : 'week';
-  rows.sort((a, b) => b[k] - a[k] || (a.me ? -1 : 1));
-  rows.forEach((r, i) => { r.rank = i + 1; r.score = r[k]; });
-  return rows;
-}
-const myRank = (mode = 'week') => board(mode).find(r => r.me).rank;
-const shortName = (n) => (n || '').trim().split(/\s+/).map((w, i) => i === 0 ? w : w[0] + '.').join(' ');
-const initials = (n) => (n || '?').replace(' · ты', '').trim().split(/\s+/).map(w => w[0]).join('').slice(0, 2).toUpperCase();
+/* ---------- игрок ---------- */
+const me = () => TEAM.players.find(p => p.id === S.player);
+const initials = (n) => (n || '?').trim().split(/\s+/).map(w => w[0]).join('').slice(0, 2).toUpperCase();
 const fmt = (n) => String(n).replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
 const esc = (s) => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const plural = (n, a, b, c) => { const m10 = n % 10, m100 = n % 100; return m10 === 1 && m100 !== 11 ? a : m10 >= 2 && m10 <= 4 && (m100 < 12 || m100 > 14) ? b : c; };
@@ -351,54 +346,63 @@ function confirmExit(cb) {
 const SCREENS = {};
 
 SCREENS.login = () => {
-  const tgName = inTg && tg.initDataUnsafe && tg.initDataUnsafe.user ? tg.initDataUnsafe.user.first_name : '';
+  let picked = S.player || null;
   const el = render(
     '<div class="rings"><i style="width:620px;height:620px;left:-300px;top:200px"></i><i style="width:360px;height:360px;left:-180px;top:300px;border-color:#3b2a4a"></i></div>' +
     '<img class="logo" src="logo.png" alt="Легенда">' +
     '<h1 style="text-align:center;font-size:32px">Тренировка внимания</h1>' +
     '<p class="muted" style="text-align:center;font-size:17px;line-height:1.45;margin:12px 8px 0">Каждый день новое задание. Набирай очки и поднимайся в рейтинге команды.</p>' +
     '<div class="spacer"></div>' +
-    '<label for="nm">Как тебя зовут?</label><input id="nm" autocomplete="off" maxlength="24" placeholder="Имя" value="' + esc(S.name || tgName) + '">' +
     '<label for="cd">Код команды от тренера</label><input id="cd" autocomplete="off" maxlength="20" placeholder="Например, ЛЕГЕНДА-2016" style="text-transform:uppercase;letter-spacing:.04em">' +
     '<div class="ok-line" id="hint"></div>' +
+    '<div id="who" hidden><label for="q">Найди себя в списке</label><input id="q" autocomplete="off" placeholder="Имя или номер"><div class="pick" id="list"></div></div>' +
     '<button class="btn" id="go" style="margin-top:14px" disabled>Вступить в команду</button>' +
     '<p class="dim" style="text-align:center;font-size:14px;margin:14px 0 0">Мы сохраняем только имя и результаты игр.</p>', 'login');
-  const nm = el.querySelector('#nm'), cd = el.querySelector('#cd'), hint = el.querySelector('#hint'), btn = el.querySelector('#go');
+  const cd = el.querySelector('#cd'), hint = el.querySelector('#hint'), btn = el.querySelector('#go');
+  const who = el.querySelector('#who'), q = el.querySelector('#q'), list = el.querySelector('#list');
   const norm = (s) => s.toUpperCase().replace(/[\s_–—-]+/g, '').replace('Ё', 'Е');
+  const lower = (s) => s.toLowerCase().replace('ё', 'е');
+  const drawList = () => {
+    const f = lower(q.value.trim().replace('№', ''));
+    const rows = TEAM.players.filter(p => !f || lower(p.short).includes(f) || String(p.num).startsWith(f))
+      .sort((a, b) => a.short.localeCompare(b.short, 'ru'));
+    list.innerHTML = rows.map(p => '<button data-id="' + p.id + '" class="' + (p.id === picked ? 'on' : '') + '"><span class="av">' + p.num + '</span>' + esc(p.short) + '<small>№' + p.num + '</small></button>').join('') ||
+      '<div class="dim" style="padding:12px">Не нашли. Спроси у тренера.</div>';
+  };
   const check = () => {
     const ok = norm(cd.value) === norm(TEAM.code);
     cd.style.borderColor = ok ? 'var(--orange)' : '';
     hint.className = 'ok-line' + (cd.value.length >= 6 && !ok ? ' err-line' : '');
-    hint.textContent = ok ? '✓ ' + TEAM.title + ' · ' + TEAM.size + ' игроков' : cd.value.length >= 6 ? 'Такой команды нет. Проверь код у тренера.' : '';
-    btn.disabled = !(ok && nm.value.trim().length >= 2);
+    hint.textContent = ok ? '✓ ' + TEAM.title + ' · ' + TEAM.players.length + ' ' + plural(TEAM.players.length, 'игрок', 'игрока', 'игроков') + (TEAM.coach ? ' · тренер ' + TEAM.coach : '') : cd.value.length >= 6 ? 'Такой команды нет. Проверь код у тренера.' : '';
+    who.hidden = !ok;
+    btn.disabled = !(ok && picked);
   };
-  nm.oninput = cd.oninput = check;
+  list.onclick = (e) => {
+    const b = e.target.closest('[data-id]'); if (!b) return;
+    picked = +b.dataset.id; haptic(); drawList(); check();
+  };
+  q.oninput = drawList; cd.oninput = check;
+  drawList(); check();
   btn.onclick = () => {
-    S.name = nm.value.trim(); S.team = TEAM.code; save(); haptic('ok'); go('home');
+    const p = TEAM.players.find(x => x.id === picked);
+    S.player = p.id; S.name = p.name; S.team = TEAM.code; save(); haptic('ok'); go('home');
   };
 };
 
 SCREENS.home = () => {
-  const t = nextTask(), rank = myRank();
-  const b = board('week'), third = b[2];
+  const t = nextTask(), done = TASKS.filter(x => everPlayed(x.id)).length;
   const acc = S.answers ? Math.round(S.correct / S.answers * 100) + '%' : '—';
-  let chase;
-  const need = (score) => { const n = Math.max(1, score - weekPoints()); return n + ' ' + plural(n, 'очко', 'очка', 'очков'); };
-  if (rank > 3) chase = '<span>До 3-го места — ' + need(third.score) + '</span>';
-  else if (rank > 1) chase = '<span>До 1-го места — ' + need(b[0].score) + '</span>';
-  else chase = '<span>Ты лидер недели!</span>';
-  const prog = rank === 1 ? 100 : Math.min(100, Math.round(weekPoints() / (rank > 3 ? third.score : b[0].score) * 100));
   const el = render(
     '<div class="top"><img src="logo.png" alt="Легенда"><span class="chip" style="color:var(--orange)">' + I.flame + '<b style="color:#fff">' + S.streak + ' ' + plural(S.streak, 'день', 'дня', 'дней') + '</b></span></div>' +
     '<div class="muted" style="font-size:17px">Привет, ' + esc(S.name) + '!</div><h1 style="margin-top:4px">Готов к тренировке?</h1>' +
-    '<div class="stats"><div class="stat"><small>Очки</small><b>' + fmt(S.points) + '</b></div><div class="stat"><small>Место</small><b>' + rank + ' <span>/' + b.length + '</span></b></div><div class="stat"><small>Точность</small><b>' + acc + '</b></div></div>' +
+    '<div class="stats"><div class="stat"><small>Очки</small><b>' + fmt(S.points) + '</b></div><div class="stat"><small>Пройдено</small><b>' + done + ' <span>/' + TASKS.length + '</span></b></div><div class="stat"><small>Точность</small><b>' + acc + '</b></div></div>' +
     (t
       ? '<div class="daily"><div class="over">НОВОЕ ЗАДАНИЕ · +1 ОЧКО</div><h2>' + esc(t.title) + '</h2><div style="font-weight:700;position:relative;z-index:1">' + esc(t.subtitle) + '</div>' +
         '<div class="tags"><span>' + esc(t.skill) + '</span><span>' + typeName[t.type] + '</span><span>один раз</span></div>' +
         '<button class="btn navy" data-play="' + t.id + '">Начать ' + I.arrow + '</button></div>'
       : '<div class="daily"><div class="over">ВСЁ ПРОЙДЕНО</div><h2>Молодец!</h2><div style="font-weight:700;position:relative;z-index:1">Ты прошёл все задания. Скоро появятся новые.</div></div>') +
-    '<button class="task" data-tab="rating" style="margin-top:12px"><div class="dot" style="color:var(--yellow);font-weight:800">' + rank + '</div><div style="flex:1"><b style="margin-bottom:8px">' + chase + '</b><div class="bar"><i style="width:' + prog + '%"></i></div></div><span class="dim">' + I.chev + '</span></button>' +
-    '<div class="row between" style="margin:22px 0 10px"><h2>Все задания</h2><span class="muted" style="font-size:14px">' + TASKS.filter(x => everPlayed(x.id)).length + ' из ' + TASKS.length + ' пройдено</span></div>' +
+    '<button class="task" data-tab="rating" style="margin-top:12px"><div class="dot" style="color:var(--yellow);font-weight:800">' + TEAM.players.length + '</div><div style="flex:1"><b>Команда ' + esc(TEAM.title) + '</b><small>' + (LIVE ? 'Смотри своё место в рейтинге' : 'Общий рейтинг заработает скоро') + '</small></div><span class="dim">' + I.chev + '</span></button>' +
+    '<div class="row between" style="margin:22px 0 10px"><h2>Все задания</h2><span class="muted" style="font-size:14px">' + done + ' из ' + TASKS.length + ' пройдено</span></div>' +
     '<div class="gap">' + TASKS.map(x => {
       const p = playOf(x.id);
       return '<button class="task" data-play="' + x.id + '"' + (p ? ' style="opacity:.6"' : '') + '><div class="dot"><i style="background:' + (SKILLS[x.skill] || '#fff') + '"></i></div><div><b>' + esc(x.title) + '</b><small>' + esc(x.skill) + ' · ' + (p ? 'пройдено · ' + p.correct + ' из ' + p.total + ' верно' : typeName[x.type].toLowerCase()) + '</small></div>' +
@@ -407,20 +411,16 @@ SCREENS.home = () => {
   el.querySelectorAll('[data-play]').forEach(b => b.onclick = () => { haptic(); startTask(b.dataset.play); });
 };
 
-SCREENS.rating = (mode = 'week') => {
-  const b = board(mode), me = b.find(r => r.me);
-  const pod = [b[1], b[0], b[2]];
-  const el = render(
+SCREENS.rating = () => {
+  const m = me();
+  const rows = TEAM.players.slice().sort((a, b) => a.short.localeCompare(b.short, 'ru'));
+  render(
     '<div class="row between"><h1>Рейтинг</h1><img src="logo.png" style="height:30px" alt=""></div>' +
-    '<div class="seg"><button data-m="week" class="' + (mode === 'week' ? 'on' : '') + '">Эта неделя</button><button data-m="all" class="' + (mode === 'all' ? 'on' : '') + '">Всё время</button></div>' +
-    '<div class="muted" style="text-align:center;font-size:14px">' + (mode === 'week' ? 'Обнулится в понедельник · осталось ' + daysToMonday() + ' ' + plural(daysToMonday(), 'день', 'дня', 'дней') : 'Очки за всё время') + '</div>' +
-    '<div class="podium">' + pod.map((r, i) => '<div class="p ' + (i === 1 ? 'first ' : '') + (r.me ? 'me' : '') + '">' + (i === 1 ? '<div style="color:var(--yellow);font-size:26px;line-height:1">♛</div>' : '') +
-      '<div class="av">' + initials(r.name) + '</div><div style="font-size:15px;font-weight:800">' + esc(r.name) + '</div><div class="stand" style="height:' + [78, 104, 66][i] + 'px"><b>' + r.rank + '</b><small>' + fmt(r.score) + '</small></div></div>').join('') + '</div>' +
-    '<div class="list card" style="border-radius:0 0 18px 18px;padding:4px 14px">' + b.slice(3).map(r => '<div class="it"><span class="n">' + r.rank + '</span><div class="av">' + initials(r.name) + '</div><div><b>' + esc(r.name) + '</b><small>' + (r.streak ? 'серия ' + r.streak + ' ' + plural(r.streak, 'день', 'дня', 'дней') : 'сегодня не играл') + '</small></div><span class="s">' + fmt(r.score) + '</span></div>').join('') + '</div>' +
-    '<div class="mine"><b style="width:22px">' + me.rank + '</b><div class="av">' + initials(S.name) + '</div><div><b>' + esc(me.name) + '</b><small>' + (S.streak ? 'серия ' + S.streak + ' ' + plural(S.streak, 'день', 'дня', 'дней') : 'сыграй задание дня') + '</small></div><span class="s">' + fmt(me.score) + '</span></div>' +
-    '<p class="dim" style="text-align:center;font-size:12px;margin-top:14px">Пока это пример команды. Настоящий рейтинг появится, когда подключим сервер.</p>' +
+    '<div class="muted" style="margin-top:6px;font-size:15px">' + esc(TEAM.title) + ' · ' + TEAM.players.length + ' ' + plural(TEAM.players.length, 'игрок', 'игрока', 'игроков') + (TEAM.coach ? ' · тренер ' + esc(TEAM.coach) : '') + '</div>' +
+    '<div class="mine" style="position:static;margin-top:16px"><div class="av">' + m.num + '</div><div><b>' + esc(m.short) + ' · ты</b><small>' + (S.streak ? 'серия ' + S.streak + ' ' + plural(S.streak, 'день', 'дня', 'дней') : 'пройди первое задание') + '</small></div><span class="s">' + S.points + ' ' + plural(S.points, 'очко', 'очка', 'очков') + '</span></div>' +
+    '<div class="explain" style="margin-top:12px">' + I.bulb + '<span>Общий рейтинг заработает скоро. Пока ты видишь только свои очки, у остальных — прочерк.</span></div>' +
+    '<div class="list card" style="margin-top:12px;padding:4px 14px">' + rows.map(p => '<div class="it"' + (p.id === m.id ? ' style="color:var(--orange)"' : '') + '><div class="av">' + p.num + '</div><div><b>' + esc(p.short) + (p.id === m.id ? ' · ты' : '') + '</b><small>№' + p.num + '</small></div><span class="s">' + (p.id === m.id ? S.points : '—') + '</span></div>').join('') + '</div>' +
     tabbar('rating'), 'tabbed');
-  el.querySelectorAll('[data-m]').forEach(x => x.onclick = () => { haptic(); go('rating', x.dataset.m); });
 };
 
 SCREENS.profile = () => {
@@ -434,7 +434,7 @@ SCREENS.profile = () => {
     return '<div class="skill"' + (has ? '' : ' style="opacity:.45"') + '><div class="row"><b>' + k + '</b><span class="muted">' + (t ? v + ' / 100' : has ? 'ещё не играл' : 'скоро') + '</span></div><div class="bar"><i style="width:' + v + '%;background:' + SKILLS[k] + '"></i></div></div>';
   }).join('');
   const el = render(
-    '<div class="row" style="gap:16px"><div class="av" style="width:84px;height:84px;font-size:30px;margin:0;background:var(--blue);border:0">' + initials(S.name) + '</div><div><h1>' + esc(S.name) + '</h1><div class="muted" style="font-size:16px;margin-top:4px">Легенда · 2016</div></div></div>' +
+    '<div class="row" style="gap:16px"><div class="av" style="width:84px;height:84px;font-size:30px;margin:0;background:var(--blue);border:0">' + me().num + '</div><div><h1>' + esc(me().short) + '</h1><div class="muted" style="font-size:16px;margin-top:4px">№' + me().num + ' · ' + esc(TEAM.title) + '</div></div></div>' +
     '<div class="stats" style="margin-top:22px"><div class="stat" style="text-align:center"><b>' + tasksDone + '</b><small>' + plural(tasksDone, 'задание', 'задания', 'заданий') + '</small></div><div class="stat" style="text-align:center"><b style="color:var(--orange)">' + S.streak + '</b><small>дней подряд</small></div><div class="stat" style="text-align:center"><b>' + acc + '</b><small>точность</small></div></div>' +
     '<h2 style="margin-top:12px">Мои навыки</h2>' + skillRows +
     '<div class="row between" style="margin-top:22px"><h2>Значки</h2><span class="muted">' + S.badges.length + ' из ' + BADGES.length + '</span></div>' +
@@ -442,7 +442,7 @@ SCREENS.profile = () => {
       const got = S.badges.includes(b.id);
       return '<button data-why="' + esc(b.why) + '"><div class="icon ' + (got ? '' : 'lock') + '" style="' + (got ? 'background:' + b.color : '') + '">' + (got ? I[b.icon] : I.lock) + '</div><small class="' + (got ? '' : 'dim') + '">' + b.name + '</small></button>';
     }).join('') + '</div>' +
-    '<button class="btn dark" id="out" style="margin-top:28px;height:50px;font-size:15px;color:var(--muted)">Сменить имя или команду</button>' +
+    '<button class="btn dark" id="out" style="margin-top:28px;height:50px;font-size:15px;color:var(--muted)">Сменить игрока</button>' +
     tabbar('profile'), 'tabbed');
   el.querySelectorAll('[data-why]').forEach(b => b.onclick = () => toast(b.dataset.why));
   el.querySelector('#out').onclick = () => go('login');
@@ -453,7 +453,7 @@ let RUN = null;
 function startTask(id) {
   const t = taskById(id);
   if (everPlayed(id)) { const p = playOf(id); toast('Уже пройдено: ' + p.correct + ' из ' + p.total + ' верно'); return; }
-  RUN = { task: t, i: 0, total: taskSize(t), correct: 0, inRow: 0, maxRow: 0, fast: false, rankBefore: myRank() };
+  RUN = { task: t, i: 0, total: taskSize(t), correct: 0, inRow: 0, maxRow: 0, fast: false };
   if (t.type === 'goals') { RUN.order = t.rounds; go('goals'); }
   else if (t.type === 'quiz') { RUN.order = t.questions; go('quiz'); }
   else go('match');
@@ -696,25 +696,21 @@ function finish() {
   give('fast', RUN.fast);
   give('scholar', new Set(S.plays.map(p => p.id)).size >= 3);
   give('week', S.streak >= 7);
-  give('captain', myRank() === 1);
+  give('captain', false); // появится вместе с общим рейтингом
   save();
-  RUN.result = { pts, fresh, rankAfter: myRank() };
+  RUN.result = { pts, fresh };
   go('summary');
 }
 SCREENS.summary = () => {
-  const r = RUN.result, up = RUN.rankBefore - r.rankAfter;
+  const r = RUN.result;
   const C = 2 * Math.PI * 80, part = RUN.correct / RUN.total;
-  const top = board('week').slice(0, 3);
-  const meTop = top.some(x => x.me);
-  const rowsTop = (meTop ? top : top.concat(board('week').find(x => x.me)));
   const el = render(
     '<div style="text-align:center;color:var(--muted);letter-spacing:.1em;font-size:13px;font-weight:800">' + 'ЗАДАНИЕ ПРОЙДЕНО' + '</div>' +
     '<h1 style="text-align:center;margin-top:8px;font-size:30px">' + (part >= 0.6 ? 'Отличная игра' : 'Хорошая попытка') + ', ' + esc(S.name) + '!</h1>' +
     '<div class="ring"><svg width="190" height="190"><circle cx="95" cy="95" r="80" fill="none" stroke="#2c3372" stroke-width="18"/><circle cx="95" cy="95" r="80" fill="none" stroke="#ec6a3f" stroke-width="18" stroke-linecap="round" stroke-dasharray="' + (C * part) + ' ' + C + '"/></svg><div><b>' + RUN.correct + '/' + RUN.total + '</b><span class="muted">верно</span></div></div>' +
-    '<div class="two"><div class="card"><small>Очки за задание</small><b style="color:var(--orange)">+' + r.pts + '</b></div><div class="card"><small>Место в команде</small><b>' + r.rankAfter + (up > 0 ? ' <span style="color:var(--blue);font-size:20px">↑' + up + '</span>' : '') + '</b></div></div>' +
+    '<div class="two"><div class="card"><small>Очки за задание</small><b style="color:var(--orange)">+' + r.pts + '</b></div><div class="card"><small>Всего очков</small><b>' + S.points + '</b></div></div>' +
     r.fresh.map(id => { const b = BADGES.find(x => x.id === id); return '<div class="newbadge" style="margin-top:12px"><div class="icon" style="background:' + b.color + '">' + I[b.icon] + '</div><div><small>НОВЫЙ ЗНАЧОК</small><div style="font-size:20px;font-weight:800">' + b.name + '</div><div class="muted" style="font-size:14px">' + b.why + '</div></div></div>'; }).join('') +
     '<div class="card row" style="margin-top:12px;color:var(--orange)">' + I.flame + '<span style="color:#fff;font-size:16px">Серия <b>' + S.streak + ' ' + plural(S.streak, 'день', 'дня', 'дней') + '</b>. Завтра новое задание.</span></div>' +
-    '<div class="card top3" style="margin-top:12px;padding:6px">' + rowsTop.map(x => '<div class="r ' + (x.me ? 'me' : '') + '"><span>' + x.rank + '</span><span>' + esc(x.name) + '</span><span>' + fmt(x.score) + '</span></div>').join('') + '</div>' +
     '<div class="spacer"></div><div class="gap"><button class="btn" data-tab="rating">Смотреть рейтинг</button><button class="btn dark" data-tab="home">На главную</button></div>');
   if (RUN.correct > 0) haptic('ok');
 };
@@ -728,7 +724,7 @@ SCREENS.summary = () => {
     return;
   }
   S = Object.assign(blank(), S);
-  go(S.name && S.team ? 'home' : 'login');
+  go(S.player && S.team && TEAM.players.some(p => p.id === S.player) ? 'home' : 'login');
 })();
 </script>
 </body>
